@@ -3,7 +3,6 @@ package llm
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/go-deepseek/deepseek"
 	"github.com/go-deepseek/deepseek/request"
@@ -11,19 +10,29 @@ import (
 
 type DeepSeekClient struct {
 	client deepseek.Client
+	model  string
 }
 
-func NewDeepSeekClient() (*DeepSeekClient, error) {
-	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+// NewDeepSeekClient 创建 DeepSeek 客户端
+// apiKey: DeepSeek API 密钥
+// model: 模型名称，如果为空则使用默认模型
+func NewDeepSeekClient(apiKey, model string) (*DeepSeekClient, error) {
 	if apiKey == "" {
-		return nil, fmt.Errorf("DEEPSEEK_API_KEY is not set")
+		return nil, fmt.Errorf("apiKey is required")
+	}
+
+	if model == "" {
+		model = deepseek.DEEPSEEK_CHAT_MODEL
 	}
 
 	c, err := deepseek.NewClient(apiKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create deepseek client: %w", err)
 	}
-	return &DeepSeekClient{client: c}, nil
+	return &DeepSeekClient{
+		client: c,
+		model:  model,
+	}, nil
 }
 
 func (d *DeepSeekClient) Chat(ctx context.Context, prompt string) (string, error) {
@@ -34,7 +43,7 @@ func (d *DeepSeekClient) Chat(ctx context.Context, prompt string) (string, error
 				Content: prompt,
 			},
 		},
-		Model:  deepseek.DEEPSEEK_CHAT_MODEL,
+		Model:  d.model,
 		Stream: false,
 	}
 

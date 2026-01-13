@@ -2,7 +2,9 @@ package prompt
 
 import "fmt"
 
-var strictPromptTemplate = `
+// StrictPromptTemplate 是 v2 版本的严格 prompt 模板
+// 该模板要求 LLM 严格遵守规则，只基于慢日志内容进行分析，输出 JSON 格式
+var StrictPromptTemplate = `
 你是一个【MySQL 慢查询分析组件】，不是聊天助手。
 
 你必须严格遵守以下规则：
@@ -48,11 +50,13 @@ var strictPromptTemplate = `
 }
 `
 
+// BuildSlowLogPromptV2 构建 v2 版本的慢日志分析 prompt
+// v2 版本引入了严格的规则约束，要求 LLM 只基于日志内容分析，输出结构化 JSON
 func BuildSlowLogPromptV2(slowLog string) string {
 	return fmt.Sprintf(`
 %s
 
 【慢日志内容】
 %s
-`, strictPromptTemplate, slowLog)
+`, StrictPromptTemplate, slowLog)
 }
