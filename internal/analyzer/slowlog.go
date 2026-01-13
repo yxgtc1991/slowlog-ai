@@ -7,7 +7,7 @@ import (
 )
 
 func AnalyzeSlowLog(ctx context.Context, slowLog string) (string, error) {
-	p := prompt.BuildSlowLogPrompt(slowLog)
+	p := prompt.BuildSlowLogPromptV2(slowLog)
 
 	client, err := llm.NewDeepSeekClient()
 	if err != nil {
