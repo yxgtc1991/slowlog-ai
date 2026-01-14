@@ -1,6 +1,15 @@
 package prompt
 
-import "fmt"
+import (
+	"ai_slow_log/internal/rag"
+	"fmt"
+)
+
+type StrictV2Prompt struct{}
+
+func (p *StrictV2Prompt) Build(slowLog string, _ []rag.KnowledgeChunk) string {
+	return BuildSlowLogPromptV2(slowLog)
+}
 
 // StrictPromptTemplate 是 v2 版本的严格 prompt 模板
 // 该模板要求 LLM 严格遵守规则，只基于慢日志内容进行分析，输出 JSON 格式

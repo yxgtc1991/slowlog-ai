@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+type RagV3Prompt struct{}
+
+func (p *RagV3Prompt) Build(slowLog string, chunks []rag.KnowledgeChunk) string {
+	return BuildSlowLogPromptV3(slowLog, chunks)
+}
+
 // BuildSlowLogPromptV3 构建 v3 版本的慢日志分析 prompt（带 RAG）
 // v3 版本在 v2 的基础上增加了 RAG 检索的知识块，用于辅助分析
 // ragChunks: 从 RAG 系统检索到的相关知识块
