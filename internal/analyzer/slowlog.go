@@ -46,6 +46,7 @@ func NewAnalyzer(
 	return a
 }
 
+// Result 分析结果
 type Result struct {
 	RawOutput string
 }
