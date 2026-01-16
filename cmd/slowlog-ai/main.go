@@ -92,42 +92,108 @@ LIMIT 10;
 		fmt.Println(analyzeResult.RawOutput)
 	*/
 
-	// ===== V5 Tool Calling 演示 =====
-	fmt.Println("\n\n=== V5 Tool Calling：真正的 MCP/Agent 模式 ===")
+	// ===== V5 Tool Calling 演示（已关闭，只保留 V6）=====
+	/*
+		// 1. 创建 Tool Calling 客户端适配器
+		toolCallingClient := llm.NewDeepSeekToolCallingAdapter(llmClient)
 
-	// 1. 创建 Tool Calling 客户端适配器
-	toolCallingClient := llm.NewDeepSeekToolCallingAdapter(llmClient)
+		// 2. 将能力转换为工具定义
+		caps := mcpServer.GetCapabilitiesAsV4()
 
-	// 2. 将能力转换为工具定义
+		// 3. 创建 V5 Tool Calling 分析器
+		v5Analyzer := analyzer.NewV5ToolCallingAnalyzer(
+			toolCallingClient,
+			analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever()),
+			mcp.NewServerAsExecutor(mcpServer),
+			caps,
+		)
+
+		// 4. 执行 V5 分析（LLM 会直接调用工具）
+		v5Result, err := v5Analyzer.Analyze(ctx, slowLog)
+		if err != nil {
+			log.Fatalf("Failed to analyze with V5: %v", err)
+		}
+
+		// 输出最终分析结果（LLM 基于工具结果的总结）
+		fmt.Println("\n" + strings.Repeat("=", 60))
+		fmt.Println("📊 慢日志分析结果（V5 Tool Calling）")
+		fmt.Println(strings.Repeat("=", 60))
+		fmt.Println(v5Result.Analysis)
+
+		// 只在需要时显示工具调用信息
+		if len(v5Result.ToolCalls) > 0 {
+			fmt.Println("\n" + strings.Repeat("-", 60))
+			fmt.Printf("🔧 工具调用：%d 次 | 迭代：%d 轮\n", len(v5Result.ToolCalls), v5Result.Iterations)
+			for i, tc := range v5Result.ToolCalls {
+				fmt.Printf("  %d. %s\n", i+1, tc.Name)
+			}
+		}
+	*/
+
+	// ===== V6 Agent 演示 =====
+	// 将能力转换为工具定义（V6 也需要）
 	caps := mcpServer.GetCapabilitiesAsV4()
+	fmt.Println("\n\n" + strings.Repeat("=", 60))
+	fmt.Println("🤖 V6 Agent：LLM 自主决策下一步行动")
+	fmt.Println(strings.Repeat("=", 60))
 
-	// 3. 创建 V5 Tool Calling 分析器
-	// 注意：需要使用包名 analyzer，而不是变量 analyzer
-	v5Analyzer := analyzer.NewV5ToolCallingAnalyzer(
-		toolCallingClient,
+	// 1. 创建 V6 Agent 分析器（使用普通 LLM 客户端，不需要 Tool Calling）
+	v6Analyzer := analyzer.NewV6AgentAnalyzer(
+		llmClient, // 使用普通 LLM 客户端
 		analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever()),
 		mcp.NewServerAsExecutor(mcpServer),
 		caps,
 	)
 
-	// 4. 执行 V5 分析（LLM 会直接调用工具）
-	v5Result, err := v5Analyzer.Analyze(ctx, slowLog)
+	// 2. 执行 V6 Agent 分析（LLM 自主决定每一步要做什么）
+	v6Result, err := v6Analyzer.Analyze(ctx, slowLog)
 	if err != nil {
-		log.Fatalf("Failed to analyze with V5: %v", err)
+		log.Fatalf("Failed to analyze with V6: %v", err)
 	}
 
-	// 输出最终分析结果（LLM 基于工具结果的总结）
+	// 输出最终分析结果
 	fmt.Println("\n" + strings.Repeat("=", 60))
-	fmt.Println("📊 慢日志分析结果（V5 Tool Calling）")
+	fmt.Println("📊 慢日志分析结果（V6 Agent）")
 	fmt.Println(strings.Repeat("=", 60))
-	fmt.Println(v5Result.Analysis)
+	fmt.Println(v6Result.FinalResult)
 
-	// 只在需要时显示工具调用信息
-	if len(v5Result.ToolCalls) > 0 {
+	// 显示 Agent 的执行轨迹
+	fmt.Println("\n" + strings.Repeat("-", 60))
+	fmt.Printf("🤖 Agent 执行轨迹：%d 轮迭代，%d 个行动\n", v6Result.Iterations, len(v6Result.Actions))
+	for i, action := range v6Result.Actions {
+		fmt.Printf("\n  %d. [%s] %s\n", i+1, action.Type, action.Reasoning)
+		switch action.Type {
+		case "call_tool":
+			fmt.Printf("     工具：%s\n", action.ToolName)
+		case "retrieve_rag":
+			fmt.Printf("     查询：%s\n", action.RAGQuery)
+		case "analyze":
+			if len(action.Analysis) > 100 {
+				fmt.Printf("     分析：%s...\n", action.Analysis[:100])
+			} else {
+				fmt.Printf("     分析：%s\n", action.Analysis)
+			}
+		case "ask_question":
+			fmt.Printf("     问题：%s\n", action.Question)
+		case "finish":
+			fmt.Printf("     完成分析\n")
+		}
+	}
+
+	// 显示统计信息
+	if len(v6Result.ToolResults) > 0 {
 		fmt.Println("\n" + strings.Repeat("-", 60))
-		fmt.Printf("🔧 工具调用：%d 次 | 迭代：%d 轮\n", len(v5Result.ToolCalls), v5Result.Iterations)
-		for i, tc := range v5Result.ToolCalls {
-			fmt.Printf("  %d. %s\n", i+1, tc.Name)
+		fmt.Printf("🔧 工具调用：%d 次\n", len(v6Result.ToolResults))
+		for toolName := range v6Result.ToolResults {
+			fmt.Printf("  - %s\n", toolName)
+		}
+	}
+
+	if len(v6Result.RAGResults) > 0 {
+		fmt.Println("\n" + strings.Repeat("-", 60))
+		fmt.Printf("📚 RAG 检索：%d 次\n", len(v6Result.RAGResults))
+		for _, rag := range v6Result.RAGResults {
+			fmt.Printf("  - 查询：%s (找到 %d 个知识块)\n", rag.Query, len(rag.Chunks))
 		}
 	}
 }

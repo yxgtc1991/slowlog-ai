@@ -29,6 +29,7 @@
   - **v3 RAG 增强**：引入知识库 - 结合专家知识，提升分析准确性
   - **v4 能力感知**：能力抽象与感知 - 系统能力可发现、可描述
   - **v5 能力调用意图**：LLM 自主决策 - LLM 输出意图，系统自动执行
+  - **v6 Agent**：真正的 AI Agent - LLM 自主决定下一步行动（调用工具、检索 RAG、分析、提问、完成）
 - ✅ **RAG 检索**：支持从知识库中检索相关模式、反模式和指标说明
 - ✅ **MCP 能力基础**：已实现 MCP（Model Context Protocol）能力接口，可扩展为 MCP 服务器
 
@@ -261,7 +262,9 @@ slowlog-ai/
 │   │   ├── interfaces.go       # LLMClient, Retriever, PromptBuilder 接口
 │   │   ├── options.go          # Option 函数和 PromptVersion
 │   │   ├── slowlog.go          # SlowLogAnalyzer 实现
-│   │   └── rag_adapter.go      # RAG 检索器适配器
+│   │   ├── rag_adapter.go      # RAG 检索器适配器
+│   │   ├── v5_tool_calling.go  # V5 Tool Calling 分析器
+│   │   └── v6_agent.go         # V6 Agent 分析器
 │   ├── llm/
 │   │   └── deepseek.go         # DeepSeek LLM 客户端封装
 │   ├── prompt/
@@ -270,7 +273,8 @@ slowlog-ai/
 │   │       ├── v2_strict.go      # v2 严格模式：约束模型
 │   │       ├── v3_rag.go         # v3 RAG 增强：引入知识库
 │   │       ├── v4_capability.go  # v4 能力感知：能力抽象与感知
-│   │       └── v5_intent.go      # v5 能力调用意图：LLM 自主决策
+│   │       ├── v5_intent.go      # v5 能力调用意图：LLM 自主决策
+│   │       └── v6_action.go       # v6 Agent：LLM 自主决定下一步行动
 │   ├── rag/
 │   │   ├── retriever.go        # RAG 检索器接口
 │   │   ├── mock.go             # Mock 检索器实现
@@ -504,6 +508,50 @@ analyzer := analyzer.NewAnalyzer(
 - **文件**：`internal/prompt/slowlog/v5_intent.go`
 - **特点**：LLM 输出能力调用意图，系统自动执行
 - **适用**：自动化执行、AI Agent
+
+#### 🤖 V6 Agent：LLM 自主决策下一步行动
+- **文件**：`internal/prompt/slowlog/v6_action.go`、`internal/analyzer/v6_agent.go`
+- **特点**：LLM 自主决定下一步要做什么（调用工具、检索 RAG、继续分析、提问、完成）
+- **适用**：真正的 AI Agent、自主规划任务
+
+**设计思路**：从"LLM 决定是否调用工具"升级到"LLM 决定下一步做什么"，实现真正的 Agent 模式。
+
+**核心改进**：
+- ✅ **多行动类型**：支持 5 种行动类型（call_tool、retrieve_rag、analyze、ask_question、finish）
+- ✅ **自主规划**：LLM 可以自主规划分析步骤，决定何时调用工具、何时检索知识库、何时完成
+- ✅ **上下文感知**：每次决策都基于当前上下文（已执行的工具结果、RAG 检索结果等）
+- ✅ **对话历史**：维护完整的对话历史，支持多轮交互
+
+**行动类型说明**：
+1. **call_tool** - 调用工具：当需要调用系统工具时使用
+2. **retrieve_rag** - 检索知识库：当需要查询相关知识时使用
+3. **analyze** - 继续分析：基于已有信息继续分析
+4. **ask_question** - 提出问题：需要用户提供额外信息时使用
+5. **finish** - 完成分析：收集足够信息，输出最终结果
+
+**代码示例**：
+```go
+// 创建 V6 Agent 分析器
+v6Analyzer := analyzer.NewV6AgentAnalyzer(
+    llmClient,              // 使用普通 LLM 客户端（不需要 Tool Calling）
+    ragRetriever,           // RAG 检索器
+    capabilityExecutor,     // 能力执行器
+    availableTools,          // 可用工具列表
+)
+
+// 执行分析（LLM 自主决定每一步要做什么）
+result, err := v6Analyzer.Analyze(ctx, slowLog)
+
+// 查看执行轨迹
+fmt.Printf("迭代次数：%d\n", result.Iterations)
+for i, action := range result.Actions {
+    fmt.Printf("%d. [%s] %s\n", i+1, action.Type, action.Reasoning)
+}
+```
+
+**与 V5 的区别**：
+- **V5**：LLM 决定"是否调用工具"，系统负责执行工具调用
+- **V6**：LLM 决定"下一步做什么"，可以是调用工具、检索 RAG、继续分析、提问或完成
 
 ---
 
