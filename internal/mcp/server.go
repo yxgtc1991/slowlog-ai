@@ -81,3 +81,13 @@ func (s *Server) HasCapability(name string) bool {
 func (s *Server) CapabilityCount() int {
 	return s.registry.Count()
 }
+
+// GetCapabilitiesAsV4 获取所有能力，转换为 CapabilityV4 格式（用于 V5 Tool Calling）
+func (s *Server) GetCapabilitiesAsV4() []promptv4.CapabilityV4 {
+	caps := s.registry.List()
+	v4Caps := make([]promptv4.CapabilityV4, len(caps))
+	for i, c := range caps {
+		v4Caps[i] = c // Capability 接口与 CapabilityV4 接口兼容
+	}
+	return v4Caps
+}
