@@ -13,6 +13,7 @@ type V6AgentAnalyzer struct {
 	retriever           Retriever               // RAG 检索器
 	capabilityExecutor  CapabilityExecutor      // 能力执行器
 	availableTools      []promptv6.CapabilityV4 // 可用工具列表
+	verbose             bool                    // 每轮轨迹输出到 stderr
 	maxIterations       int                     // 最大迭代次数
 	currentIteration    int                     // 当前迭代次数
 	conversationHistory []string                // 对话历史
@@ -41,8 +42,9 @@ func NewV6AgentAnalyzer(
 	retriever Retriever,
 	executor CapabilityExecutor,
 	tools []promptv6.CapabilityV4,
+	opts ...V6AgentOption,
 ) *V6AgentAnalyzer {
-	return &V6AgentAnalyzer{
+	a := &V6AgentAnalyzer{
 		llm:                 llm,
 		retriever:           retriever,
 		capabilityExecutor:  executor,
@@ -51,6 +53,10 @@ func NewV6AgentAnalyzer(
 		context:             make(map[string]interface{}),
 		conversationHistory: make([]string, 0),
 	}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
 }
 
 // Analyze 执行 V6 Agent 版本的分析
@@ -72,6 +78,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 	// Agent 循环：LLM 决策 → 执行 → 更新上下文 → 继续
 	for a.currentIteration < a.maxIterations {
 		a.currentIteration++
+		a.traceRoundStart(a.currentIteration)
 
 		// 1. 构建 Agent prompt，让 LLM 决定下一步行动
 		prompt := promptv6.BuildAgentPromptV6(
@@ -87,18 +94,13 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			return nil, fmt.Errorf("failed to call LLM: %w", err)
 		}
 
-		// 调试：输出 LLM 的原始响应（前 1000 字符）
-		if len(llmOutput) > 1000 {
-			fmt.Printf("[DEBUG] LLM 响应（前1000字符）: %s...\n", llmOutput[:1000])
-		} else {
-			fmt.Printf("[DEBUG] LLM 完整响应: %s\n", llmOutput)
-		}
-
 		// 3. 解析 LLM 的决策
 		decision, err := promptv6.ParseAgentDecision(llmOutput)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse agent decision: %w", err)
 		}
+
+		a.traceDecision(decision, llmOutput)
 
 		// 4. 记录决策
 		allActions = append(allActions, decision.NextAction)
@@ -106,6 +108,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			fmt.Sprintf("决策 %d: %s - %s", a.currentIteration, decision.NextAction.Type, decision.NextAction.Reasoning))
 
 		// 5. 执行行动
+		var lastRAG *RAGResult
 		switch decision.NextAction.Type {
 		case promptv6.ActionCallTool:
 			// 调用工具
@@ -141,10 +144,12 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 						"score":   chunk.Score,
 					}
 				}
-				ragResults = append(ragResults, RAGResult{
+				rr := RAGResult{
 					Query:  decision.NextAction.RAGQuery,
 					Chunks: chunkInterfaces,
-				})
+				}
+				ragResults = append(ragResults, rr)
+				lastRAG = &ragResults[len(ragResults)-1]
 				a.context[fmt.Sprintf("rag_%s_result", decision.NextAction.RAGQuery)] = chunkInterfaces
 				a.conversationHistory = append(a.conversationHistory,
 					fmt.Sprintf("检索 RAG: %s (找到 %d 个知识块)", decision.NextAction.RAGQuery, len(chunks)))
@@ -170,8 +175,9 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			finalResult = decision.NextAction.Result
 			a.conversationHistory = append(a.conversationHistory,
 				fmt.Sprintf("完成: %s", finalResult))
-			break // 跳出循环
 		}
+
+		a.traceAfterAction(decision.NextAction, toolResults, lastRAG)
 
 		// 如果已经完成，跳出循环
 		if decision.NextAction.Type == promptv6.ActionFinish {

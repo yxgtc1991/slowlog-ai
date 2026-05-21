@@ -2,8 +2,10 @@ package main
 
 import (
 	"ai_slow_log/internal/analyzer"
+	"ai_slow_log/internal/config"
 	"ai_slow_log/internal/llm"
 	"ai_slow_log/internal/mcp"
+	"ai_slow_log/internal/mysql"
 	prompt "ai_slow_log/internal/prompt/slowlog"
 	"ai_slow_log/internal/rag"
 	"context"
@@ -13,7 +15,34 @@ import (
 	"strings"
 )
 
+func slowLogFileArg() string {
+	for _, arg := range os.Args[1:] {
+		if strings.HasPrefix(arg, "-") {
+			continue
+		}
+		return arg
+	}
+	return ""
+}
+
+func agentTraceEnabled() bool {
+	if os.Getenv("SLOWLOG_AGENT_TRACE") == "1" || strings.EqualFold(os.Getenv("SLOWLOG_AGENT_TRACE"), "true") {
+		return true
+	}
+	for _, arg := range os.Args[1:] {
+		if arg == "-agent-trace" || arg == "--agent-trace" {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
+	agentTrace := agentTraceEnabled()
+	if agentTrace {
+		fmt.Fprintln(os.Stderr, "ℹ️  Agent 轨迹已开启（stderr 每轮输出，结束后再打汇总）")
+	}
+
 	// 示例慢日志
 	slowLog := `
 # Time: 2025-01-05T10:12:33.123456Z
@@ -28,9 +57,8 @@ ORDER BY created_at DESC
 LIMIT 10;
 `
 
-	// 支持从命令行参数读取慢日志文件
-	if len(os.Args) > 1 {
-		filePath := os.Args[1]
+	// 支持从命令行参数读取慢日志文件（跳过 -agent-trace 等 flag）
+	if filePath := slowLogFileArg(); filePath != "" {
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			log.Fatalf("Failed to read slow log file: %v", err)
@@ -59,6 +87,21 @@ LIMIT 10;
 		Analyzer: v4Analyzer,
 	}
 	mcpServer.RegisterCapability(capability)
+
+	// 本地 MySQL：从 .env / 环境变量加载，注册 connect_mysql_instance
+	mysqlCfg, err := config.MustLoadMySQL()
+	if err != nil {
+		log.Printf("mysql: %v (skip connect_mysql_instance)", err)
+	} else {
+		mysqlClient, err := mysql.NewClient(mysqlCfg)
+		if err != nil {
+			log.Printf("mysql: connect failed: %v", err)
+		} else {
+			defer func() { _ = mysqlClient.Close() }()
+			mcp.RegisterMySQLCapabilities(mcpServer, mysqlClient)
+			fmt.Printf("MySQL: connected to %s:%d as %s\n", mysqlCfg.Host, mysqlCfg.Port, mysqlCfg.User)
+		}
+	}
 
 	// V4 演示代码已注释，如需查看 V4 功能，取消下面的注释
 	/*
@@ -138,11 +181,16 @@ LIMIT 10;
 	fmt.Println(strings.Repeat("=", 60))
 
 	// 1. 创建 V6 Agent 分析器（使用普通 LLM 客户端，不需要 Tool Calling）
+	v6Opts := []analyzer.V6AgentOption{}
+	if agentTrace {
+		v6Opts = append(v6Opts, analyzer.WithAgentVerbose(true))
+	}
 	v6Analyzer := analyzer.NewV6AgentAnalyzer(
 		llmClient, // 使用普通 LLM 客户端
 		analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever()),
 		mcp.NewServerAsExecutor(mcpServer),
 		caps,
+		v6Opts...,
 	)
 
 	// 2. 执行 V6 Agent 分析（LLM 自主决定每一步要做什么）
@@ -157,43 +205,5 @@ LIMIT 10;
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println(v6Result.FinalResult)
 
-	// 显示 Agent 的执行轨迹
-	fmt.Println("\n" + strings.Repeat("-", 60))
-	fmt.Printf("🤖 Agent 执行轨迹：%d 轮迭代，%d 个行动\n", v6Result.Iterations, len(v6Result.Actions))
-	for i, action := range v6Result.Actions {
-		fmt.Printf("\n  %d. [%s] %s\n", i+1, action.Type, action.Reasoning)
-		switch action.Type {
-		case "call_tool":
-			fmt.Printf("     工具：%s\n", action.ToolName)
-		case "retrieve_rag":
-			fmt.Printf("     查询：%s\n", action.RAGQuery)
-		case "analyze":
-			if len(action.Analysis) > 100 {
-				fmt.Printf("     分析：%s...\n", action.Analysis[:100])
-			} else {
-				fmt.Printf("     分析：%s\n", action.Analysis)
-			}
-		case "ask_question":
-			fmt.Printf("     问题：%s\n", action.Question)
-		case "finish":
-			fmt.Printf("     完成分析\n")
-		}
-	}
-
-	// 显示统计信息
-	if len(v6Result.ToolResults) > 0 {
-		fmt.Println("\n" + strings.Repeat("-", 60))
-		fmt.Printf("🔧 工具调用：%d 次\n", len(v6Result.ToolResults))
-		for toolName := range v6Result.ToolResults {
-			fmt.Printf("  - %s\n", toolName)
-		}
-	}
-
-	if len(v6Result.RAGResults) > 0 {
-		fmt.Println("\n" + strings.Repeat("-", 60))
-		fmt.Printf("📚 RAG 检索：%d 次\n", len(v6Result.RAGResults))
-		for _, rag := range v6Result.RAGResults {
-			fmt.Printf("  - 查询：%s (找到 %d 个知识块)\n", rag.Query, len(rag.Chunks))
-		}
-	}
+	analyzer.PrintV6AgentSummary(v6Result, agentTrace)
 }
