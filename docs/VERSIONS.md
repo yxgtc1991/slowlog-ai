@@ -1,6 +1,6 @@
 # 版本演进详解
 
-← [README](../README.md) · [架构与扩展](ARCHITECTURE.md)
+← [路线图](AGENT-ROADMAP.md) · [README](../README.md) · [架构与扩展](ARCHITECTURE.md)
 
 日常速查（总览表、如何切换演示）见 [README · 版本演进速查](../README.md#版本演进速查)。
 
@@ -272,7 +272,7 @@ for i, action := range result.Actions {
 | **V5** | Tool Calling | API tool_calls | ✅ | 可靠自动调工具 |
 | **V6** | Agent | NextAction 多轮 | ✅ | 自主规划整条分析链路 |
 
-### 🎓 学习要点（面试 / 复盘）
+### 🎓 学习要点（复盘）
 
 1. **V1 → V2**：Prompt 约束与结构化输出
 2. **V2 → V3**：RAG 边界（confirmed vs suspected）

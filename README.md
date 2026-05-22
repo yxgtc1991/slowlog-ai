@@ -1,166 +1,118 @@
 # slowlog-ai
 
-基于 LLM 的 MySQL 慢日志智能分析（Go）。从 Prompt 约束、RAG、MCP 能力感知到 V6 Agent 多轮决策，**V1–V6 代码均保留在同一仓库**，便于对比演进。
-
-| 文档 | 内容 |
-|------|------|
-| **本文 README** | 速查表、安装运行、目录 |
-| [docs/VERSIONS.md](docs/VERSIONS.md) | V1–V6 **设计思路、代码示例、对比与学习要点** |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 接口、Options、MCP、MySQL、知识库、扩展开发、JSON 输出 |
+MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 同仓保留**，便于对比演进。细节见 [docs/AGENT-ROADMAP.md](docs/AGENT-ROADMAP.md)。
 
 ---
 
-## 项目背景
+## 命令速查（先看这张表）
 
-云数据库慢日志人工分析成本高，且多数工具偏统计、缺少「原因 + 建议」的语义分析。本项目用 **DeepSeek + Prompt / RAG + MCP 能力 + Agent 循环** 做辅助分析（DBA / 平台侧 PoC）。
+| 命令 | 一步说明 | 需要 API Key | 需要 MySQL |
+|------|----------|:------------:|:----------:|
+| `make run` | 控制台跑一遍 **V6 Agent**（默认慢日志） | ✓ | 可选 |
+| `make agent-run` | **完整跑通** + 写入 `reports/`（HTML/MD/JSON，可复盘） | ✓ | 推荐 |
+| `make agent-eval` | **回归测试**：标准用例检查轨迹与结论，**不调 LLM** | — | — |
+| `make mysql-check` | 只测 `.env` 里 MySQL 能否连通 | — | ✓ |
+| `make report-md JSON=reports/xxx.json` | 从已有 JSON **重生** MD/HTML，不重跑 Agent | — | — |
+| `make doc-links` | 校验文档内 Markdown 链接与锚点 | — | — |
+| `SLOWLOG_AGENT_TRACE=1 make run` | 同上，但 **stderr 打印每轮** 决策与工具/RAG | ✓ | 可选 |
+
+```bash
+cp .env.example .env    # DEEPSEEK_API_KEY；可选 MYSQL_*=test
+make agent-eval         # 改代码后先跑这个（秒级、无 Token）
+make agent-run          # 真 LLM + 报告存档（推荐演示/复盘）
+make run                # 轻量演示
+```
+
+| 文档 | 何时打开 |
+|------|----------|
+| [AGENT-ROADMAP](docs/AGENT-ROADMAP.md) | 总览、后续路线、汇报提纲 |
+| [AGENT-RUN](docs/AGENT-RUN.md) | `agent-run` 报告里有什么、参数说明 |
+| [AGENT-EVAL](docs/AGENT-EVAL.md) | 回归测什么、如何对比 `agent-run` |
+| [VERSIONS](docs/VERSIONS.md) | V1–V6 设计与代码示例 |
+| [ARCHITECTURE](docs/ARCHITECTURE.md) | 接口、MCP、扩展开发 |
+
+---
+
+## V6 Agent 执行流程
+
+```text
+拼 Prompt → LLM 输出 NextAction → 执行 → 结果写入 context → 下一轮 … → finish 结束
+```
+
+| `NextAction.type` | 本轮做什么 |
+|-------------------|------------|
+| `retrieve_rag` | 查知识库，结果进 `context` |
+| `call_tool` | 调 MCP（慢日志分析 / 连库 / EXPLAIN / 建索引 dry_run） |
+| `analyze` | 把中间结论写进 `context` |
+| `ask_question` | 记录待问（演示模式不暂停等人） |
+| `finish` | 输出最终 `result`，**结束** |
+
+流程图：[docs/diagrams/v6-agent-flow.md](docs/diagrams/v6-agent-flow.md)
+
+**`make agent-run` 推荐顺序（guided）**：RAG → 连库 → EXPLAIN → 索引 dry_run → analyze → finish → 打开 `reports/*.brief.html` 看逐轮。
 
 ---
 
 ## 版本演进速查
 
-> 各版「怎么实现的」见 [docs/VERSIONS.md](docs/VERSIONS.md)。
-
-### 当前默认演示
-
-| 项 | 说明 |
-|----|------|
-| 入口 | `cmd/slowlog-ai/main.go` |
-| 默认 | **V6 Agent**（`call_tool` / `retrieve_rag` / `analyze` / `ask_question` / `finish`） |
-| 可切换 | `main.go` 内取消注释：**V4** 能力列表、**V5** Tool Calling |
-| V1–V3 | `analyzer.NewAnalyzer` + `WithPromptBuilder`，见 [ARCHITECTURE · 分析流程](docs/ARCHITECTURE.md#analysis-flow) |
-
-### 演进路线
-
-**V1 问模型** → **V2 JSON 约束** → **V3 + RAG** → **V4 能力感知** → **V5 Tool Calling** → **V6 Agent**
+> 实现细节：[VERSIONS](docs/VERSIONS.md) · V5/V6 区别见下节
 
 ### 总览表（V1 → V6）
 
-| 版本 | 一句话 | 相对上一版的核心优化 | 关键代码 |
-|------|--------|----------------------|----------|
-| **V1** | 直接问模型 | 零约束，验证可行性 | `prompt/slowlog/v1_basic.go` |
-| **V2** | 约束别瞎猜 | JSON；confirmed / suspected；禁止假设 schema | `v2_strict.go` · `analyzer/slowlog.go` |
-| **V3** | 注入专家知识 | RAG；知识不进 confirmed；无知识回退 V2 | `v3_rag.go` · `rag/slowlog/docs/` |
-| **V4** | 系统能自我介绍 | `Capability` + Registry；MCP 基础 | `v4_capability.go` · `mcp/*` |
-| **V5** | 协议级调工具 | DeepSeek Tool Calling；多轮 tool_calls | `v5_tool_calling.go` · `v5_intent.go` |
-| **V6** | Agent 规划全链路 | 5 种行动；上下文 + 轨迹；普通 Chat 即可 | `v6_agent.go` · `v6_action.go` |
+| 版本 | 一句话 |
+|------|--------|
+| V1 | 直接问模型 |
+| V2 | JSON + confirmed/suspected |
+| V3 | + RAG |
+| V4 | 能力注册表 / MCP |
+| V5 | API `tool_calls` |
+| **V6** | **NextAction 多轮 Agent（默认）** |
 
-### 各版本解决的「上一版痛点」
+### V5 与 V6 {#v5-vs-v6}
 
-| 升级 | 上一版痛点 | 本版怎么解决 |
-|------|------------|--------------|
-| V1→V2 | 输出乱、不可解析、编造表结构 | 严格规则 + 强制 JSON |
-| V2→V3 | 只靠模型常识 | RAG 注入；知识边界 |
-| V3→V4 | 能力写死在 Prompt | 能力注册表，动态扩展 |
-| V4→V5 | 正文里「说要调工具」不可靠 | API 级 Tool Calling |
-| V5→V6 | 只会调工具 | Agent：RAG / 分析 / 追问 / 结束 |
+| | V5 | V6 |
+|---|----|----|
+| 协议 | DeepSeek Tool Calling | 自描述 `NextAction` JSON |
+| 能做 |  mainly 调工具 | 工具 + RAG + 分析 + 提问 + 结束 |
+| 入口 | `main.go` 注释块 | **`make run` 默认** |
 
-### V5 与 V6（易混）
+切换 V4/V5：编辑 `cmd/slowlog-ai/main.go` 对应注释块。
 
-| 维度 | V5 | V6 |
-|------|----|----|
-| 决策 | `tool_calls`（DeepSeek 协议） | `NextAction` JSON |
-| 范围 | 主要是 MCP 工具 | 工具 + RAG + 分析 + 提问 + 结束 |
-| LLM | `ToolCallingClient` | 普通 `LLMClient` |
-| main | 注释块 | **默认运行** |
+---
 
-### V6 Agent 执行流程
+## MCP 能力
 
-默认演示（`make run`）走 `internal/analyzer/v6_agent.go` 中的循环：每轮 LLM 输出一个 `NextAction`，本地执行后把结果写入 `context`，再进入下一轮 Prompt。
-
-![V6 Agent 执行流程](docs/diagrams/v6-agent-flow.png)
-
-（大图与 Mermaid 源码：[docs/diagrams/v6-agent-flow.md](docs/diagrams/v6-agent-flow.md)）
-
-**一轮循环（固定三步）**
-
-| 步骤 | 做什么 | 代码 |
-|------|--------|------|
-| ① | 拼 Prompt（慢日志 + 可用工具 + 对话历史 + `context`） | `BuildAgentPromptV6` |
-| ② | LLM 返回 `NextAction` JSON | `v6_agent.Analyze` → `llm.Chat` |
-| ③ | 按 `type` 执行行动（见下表） | `switch decision.NextAction.Type` |
-
-**`NextAction.type` 分支**
-
-| type | 行为 | 下一轮 |
-|------|------|--------|
-| `retrieve_rag` | 按 `rag_query` 检索知识库，写入 `context` | 回到 ① |
-| `call_tool` | 调用 MCP（如 `analyze_slow_log`、`explain_mysql_query`） | 回到 ① |
-| `analyze` | 把中间分析写入 `context` | 回到 ① |
-| `ask_question` | 记录问题（演示模式不阻塞等待用户） | 回到 ① |
-| `finish` | 输出 `result` 作为最终结果 | **结束** |
-
-要看**每一轮**的决策与工具/RAG 明细：`SLOWLOG_AGENT_TRACE=1 go run ./cmd/slowlog-ai -agent-trace`，或见 [Agent 轨迹](#agent-轨迹观察每轮决策)。
-
-**完整体验 + 报告存档**（RAG / MCP / 结论写入 `reports/`，便于事后查阅）：见 [docs/AGENT-RUN.md](docs/AGENT-RUN.md)，执行 `make agent-run`。
-
-### MCP 能力
-
-| 能力名 | 作用 |
-|--------|------|
+| 工具 | 作用 |
+|------|------|
 | `analyze_slow_log` | 慢日志结构化分析 |
-| `connect_mysql_instance` | 校验 `.env` 中 MySQL（可选） |
-| `explain_mysql_query` | 对 SELECT 执行 EXPLAIN（如 `test.products`） |
-| `add_mysql_index` | 生成/执行建索引 DDL（默认 `dry_run=true`） |
-
-详见 [ARCHITECTURE · MCP](docs/ARCHITECTURE.md#mcp)。
-
-### 如何体验某一版本
-
-```bash
-cp .env.example .env   # DEEPSEEK_API_KEY；可选 MYSQL_*
-make run               # 默认 V6
-make mysql-check       # 仅 MySQL，不跑 LLM
-```
-
-切换 V4/V5：编辑 `cmd/slowlog-ai/main.go` 对应注释块。V1–V3 见 [docs/VERSIONS.md](docs/VERSIONS.md)。
+| `connect_mysql_instance` | 校验 MySQL |
+| `explain_mysql_query` | SELECT 的 EXPLAIN |
+| `add_mysql_index` | 建索引 DDL（默认 **dry_run**） |
 
 ---
 
-## 项目结构
+## 目录
 
-```
-slowlog-ai/
-├── cmd/slowlog-ai/main.go    # 默认 V6；V4/V5 注释块可开
-├── cmd/mysql-check/          # MySQL 连通性
-├── internal/
-│   ├── analyzer/             # V1–V3 / V5 / V6
-│   ├── prompt/slowlog/       # v1_basic … v6_action
-│   ├── mcp/                  # Capability 与 Server
-│   ├── config/ · mysql/      # 本地 MySQL
-│   ├── llm/ · rag/
-├── docs/                      # VERSIONS、ARCHITECTURE、diagrams/
-├── Makefile · .env.example
+```text
+cmd/slowlog-ai/     # 默认 V6 演示
+cmd/agent-run/      # 全流程 + reports/
+cmd/agent-eval/     # 回归（标准用例）
+internal/analyzer/  # V1–V6，含 v6_agent、报告
+internal/eval/      # 回归逻辑
+internal/mcp/ · mysql/ · rag/ · llm/
+docs/               # ROADMAP、RUN、EVAL、VERSIONS、ARCHITECTURE
+testdata/           # slowlog-products.txt 等
 ```
 
 ---
 
-## 快速开始
+## 环境
 
-**环境**：Go 1.23+ · DeepSeek API Key
-
-### Agent 轨迹（观察每轮决策）
+Go 1.23+ · `DEEPSEEK_API_KEY` · 本地演示建议 `MYSQL_DATABASE=test` 与 `testdata/slowlog-products.txt` 中表结构一致。
 
 ```bash
-git clone https://github.com/your-org/slowlog-ai.git
-cd slowlog-ai
-cp .env.example .env
-# 编辑 .env：DEEPSEEK_API_KEY=... ；可选 MYSQL_*
-
-make deps    # 内网 GOPROXY 超时时：默认 goproxy.cn
-make run     # V6 演示
-go run ./cmd/slowlog-ai /path/to/slowlog.txt
-
-# 观察 Agent 每轮决策 / 工具 / RAG（轨迹 stderr，汇总 stdout）
-SLOWLOG_AGENT_TRACE=1 go run ./cmd/slowlog-ai -agent-trace
-```
-
-**V1–V3 代码示例**（RAG + v3）：[ARCHITECTURE · V1–V3 集成示例](docs/ARCHITECTURE.md#v1-v3-example)
-
-**构建**：
-
-```bash
-make build   # 依赖 vendor，见 Makefile
-make doc-links   # 校验 README / docs 内 Markdown 链接与标题锚点（GoLand 规则）
+make deps          # go mod tidy（内网可设 GOPROXY，见 Makefile）
+make build         # 编译 bin/
 ```
 
 ---

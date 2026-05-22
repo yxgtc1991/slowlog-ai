@@ -1,5 +1,7 @@
 # V6 Agent 完整体验（带报告存档）
 
+← [路线图](AGENT-ROADMAP.md) · [README](../README.md)
+
 一次运行即可把 **每轮 LLM 决策、RAG 命中、MCP 工具返回、最终结论** 写入 `reports/`，后续查阅**无需再调 API**。
 
 ## 前置条件

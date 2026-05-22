@@ -1,6 +1,6 @@
 # 架构、MCP 与扩展
 
-← [README](../README.md) · [版本演进详解](VERSIONS.md)
+← [路线图](AGENT-ROADMAP.md) · [README](../README.md) · [版本演进详解](VERSIONS.md)
 
 ---
 

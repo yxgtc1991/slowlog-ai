@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-05-21T10:00:00Z",
+  "slow_log": "# stub",
+  "iterations": 2,
+  "final_result": "诊断：全表扫描，建议 price 索引。",
+  "actions": [
+    {
+      "type": "retrieve_rag",
+      "reasoning": "查知识库"
+    },
+    {
+      "type": "finish",
+      "reasoning": "完成",
+      "result": "诊断：全表扫描，建议 price 索引。"
+    }
+  ],
+  "rounds": [],
+  "tool_results": {},
+  "rag_results": [],
+  "conversation_history": []
+}
