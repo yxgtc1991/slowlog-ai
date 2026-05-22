@@ -14,6 +14,8 @@ type V6AgentAnalyzer struct {
 	capabilityExecutor  CapabilityExecutor      // 能力执行器
 	availableTools      []promptv6.CapabilityV4 // 可用工具列表
 	verbose             bool                    // 每轮轨迹输出到 stderr
+	recordRounds        bool                    // 记录每轮 LLM 原文与执行结果（写报告）
+	extraGuide          string                  // 写入 Prompt 的推荐流程（可选）
 	maxIterations       int                     // 最大迭代次数
 	currentIteration    int                     // 当前迭代次数
 	conversationHistory []string                // 对话历史
@@ -24,6 +26,7 @@ type V6AgentAnalyzer struct {
 type V6AgentResult struct {
 	FinalResult         string                 // 最终分析结果
 	Actions             []promptv6.NextAction  // 执行的所有行动
+	Rounds              []AgentRoundRecord     // 每轮明细（需 WithAgentRecordRounds）
 	ToolResults         map[string]interface{} // 工具执行结果
 	RAGResults          []RAGResult            // RAG 检索结果
 	Iterations          int                    // 实际迭代次数
@@ -71,6 +74,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 	a.context = make(map[string]interface{})
 	a.conversationHistory = make([]string, 0)
 	allActions := make([]promptv6.NextAction, 0)
+	rounds := make([]AgentRoundRecord, 0)
 	toolResults := make(map[string]interface{})
 	ragResults := make([]RAGResult, 0)
 	var finalResult string
@@ -86,6 +90,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			a.availableTools,
 			a.conversationHistory,
 			a.context,
+			a.extraGuide,
 		)
 
 		// 2. 调用 LLM 获取决策
@@ -101,6 +106,13 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 		}
 
 		a.traceDecision(decision, llmOutput)
+
+		roundRec := AgentRoundRecord{
+			Round:        a.currentIteration,
+			LLMRaw:       llmOutput,
+			CurrentState: decision.CurrentState,
+			Action:       decision.NextAction,
+		}
 
 		// 4. 记录决策
 		allActions = append(allActions, decision.NextAction)
@@ -118,8 +130,10 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 				decision.NextAction.ToolArgs,
 			)
 			if err != nil {
+				roundRec.ActionError = err.Error()
 				a.context[fmt.Sprintf("tool_%s_error", decision.NextAction.ToolName)] = err.Error()
 			} else {
+				roundRec.ActionOutcome = result
 				toolResults[decision.NextAction.ToolName] = result
 				a.context[fmt.Sprintf("tool_%s_result", decision.NextAction.ToolName)] = result
 			}
@@ -130,6 +144,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			// 检索 RAG
 			chunks, err := a.retriever.Retrieve(ctx, decision.NextAction.RAGQuery)
 			if err != nil {
+				roundRec.ActionError = err.Error()
 				a.context[fmt.Sprintf("rag_%s_error", decision.NextAction.RAGQuery)] = err.Error()
 				a.conversationHistory = append(a.conversationHistory,
 					fmt.Sprintf("检索 RAG 失败: %s - %v", decision.NextAction.RAGQuery, err))
@@ -150,6 +165,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 				}
 				ragResults = append(ragResults, rr)
 				lastRAG = &ragResults[len(ragResults)-1]
+				roundRec.ActionOutcome = lastRAG
 				a.context[fmt.Sprintf("rag_%s_result", decision.NextAction.RAGQuery)] = chunkInterfaces
 				a.conversationHistory = append(a.conversationHistory,
 					fmt.Sprintf("检索 RAG: %s (找到 %d 个知识块)", decision.NextAction.RAGQuery, len(chunks)))
@@ -157,6 +173,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 
 		case promptv6.ActionAnalyze:
 			// 继续分析（基于已有信息）
+			roundRec.ActionOutcome = decision.NextAction.Analysis
 			a.context["analysis"] = decision.NextAction.Analysis
 			a.conversationHistory = append(a.conversationHistory,
 				fmt.Sprintf("分析: %s", decision.NextAction.Analysis))
@@ -172,12 +189,17 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 
 		case promptv6.ActionFinish:
 			// 完成分析
-			finalResult = decision.NextAction.Result
+			finalResult = decision.NextAction.Result.String()
 			a.conversationHistory = append(a.conversationHistory,
 				fmt.Sprintf("完成: %s", finalResult))
 		}
 
 		a.traceAfterAction(decision.NextAction, toolResults, lastRAG)
+
+		if a.recordRounds {
+			roundRec.ContextKeys = contextKeys(a.context)
+			rounds = append(rounds, roundRec)
+		}
 
 		// 如果已经完成，跳出循环
 		if decision.NextAction.Type == promptv6.ActionFinish {
@@ -190,8 +212,8 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 		lastAction := allActions[len(allActions)-1]
 		if lastAction.Analysis != "" {
 			finalResult = lastAction.Analysis
-		} else if lastAction.Result != "" {
-			finalResult = lastAction.Result
+		} else if lastAction.Result.String() != "" {
+			finalResult = lastAction.Result.String()
 		} else {
 			finalResult = "分析未完成（达到最大迭代次数）"
 		}
@@ -200,6 +222,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 	return &V6AgentResult{
 		FinalResult:         finalResult,
 		Actions:             allActions,
+		Rounds:              rounds,
 		ToolResults:         toolResults,
 		RAGResults:          ragResults,
 		Iterations:          a.currentIteration,

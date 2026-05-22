@@ -3,7 +3,7 @@ GOPROXY ?= https://goproxy.cn,direct
 
 export GOPROXY
 
-.PHONY: deps vendor build mysql-check mysql-cap-check doc-links run
+.PHONY: deps vendor build mysql-check mysql-cap-check doc-links agent-run report-md run
 
 deps:
 	go mod tidy
@@ -23,6 +23,14 @@ mysql-cap-check:
 
 doc-links:
 	go run ./scripts/validate-md-links
+
+agent-run:
+	go run ./cmd/agent-run
+
+# 从已有 JSON 重新生成 GoLand 可读的 .md（无需重跑 Agent）
+report-md:
+	@test -n "$(JSON)" || (echo 'usage: make report-md JSON=reports/agent-run-xxx.json' && exit 1)
+	go run ./cmd/report-md $(JSON)
 
 run:
 	go run ./cmd/slowlog-ai

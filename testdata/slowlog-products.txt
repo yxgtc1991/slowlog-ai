@@ -1,0 +1,13 @@
+# Time: 2026-05-21T10:00:00.000000Z
+# User@Host: app[app] @ localhost []
+# Query_time: 2.350  Lock_time: 0.000
+# Rows_sent: 20  Rows_examined: 48000
+SET timestamp=1747802400;
+# 与 test.products 表一致：列 id, created_at, updated_at, code, price
+# 已有索引 idx_code_price_time(code, price, created_at)
+# 本 SQL 仅按 price 过滤且未带 code，复合索引左侧前缀用不上，易全表扫描
+SELECT *
+FROM products
+WHERE price >= 100
+ORDER BY created_at DESC
+LIMIT 20;

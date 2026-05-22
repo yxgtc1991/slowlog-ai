@@ -91,6 +91,8 @@
 
 要看**每一轮**的决策与工具/RAG 明细：`SLOWLOG_AGENT_TRACE=1 go run ./cmd/slowlog-ai -agent-trace`，或见 [Agent 轨迹](#agent-轨迹观察每轮决策)。
 
+**完整体验 + 报告存档**（RAG / MCP / 结论写入 `reports/`，便于事后查阅）：见 [docs/AGENT-RUN.md](docs/AGENT-RUN.md)，执行 `make agent-run`。
+
 ### MCP 能力
 
 | 能力名 | 作用 |
@@ -139,7 +141,7 @@ slowlog-ai/
 ### Agent 轨迹（观察每轮决策）
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/your-org/slowlog-ai.git
 cd slowlog-ai
 cp .env.example .env
 # 编辑 .env：DEEPSEEK_API_KEY=... ；可选 MYSQL_*

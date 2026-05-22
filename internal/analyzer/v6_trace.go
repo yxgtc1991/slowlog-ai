@@ -18,6 +18,20 @@ func WithAgentVerbose(verbose bool) V6AgentOption {
 	}
 }
 
+// WithAgentRecordRounds 记录每轮完整输出，供 SaveV6RunReport 持久化。
+func WithAgentRecordRounds(record bool) V6AgentOption {
+	return func(a *V6AgentAnalyzer) {
+		a.recordRounds = record
+	}
+}
+
+// WithAgentGuide 在 Prompt 中注入推荐分析流程（见 prompt.GuidedSlowLogPreamble）。
+func WithAgentGuide(guide string) V6AgentOption {
+	return func(a *V6AgentAnalyzer) {
+		a.extraGuide = guide
+	}
+}
+
 func (a *V6AgentAnalyzer) tracef(format string, args ...interface{}) {
 	if !a.verbose {
 		return
@@ -53,7 +67,7 @@ func (a *V6AgentAnalyzer) traceDecision(decision *promptv6.AgentDecision, rawLLM
 	case promptv6.ActionAskQuestion:
 		a.tracef("  提问: %s\n", na.Question)
 	case promptv6.ActionFinish:
-		a.traceDumpText("  最终结果预览", na.Result, 500)
+		a.traceDumpText("  最终结果预览", na.Result.String(), 500)
 	}
 	if a.verbose && rawLLM != "" {
 		a.tracef("\n【LLM 原始 JSON 响应】\n")

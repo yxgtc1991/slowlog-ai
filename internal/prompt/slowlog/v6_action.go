@@ -28,7 +28,7 @@ type NextAction struct {
 	RAGQuery  string                 `json:"rag_query,omitempty"` // 如果 type=retrieve_rag，检索查询
 	Analysis  string                 `json:"analysis,omitempty"`  // 如果 type=analyze，分析内容
 	Question  string                 `json:"question,omitempty"`  // 如果 type=ask_question，问题内容
-	Result    string                 `json:"result,omitempty"`    // 如果 type=finish，最终结果
+	Result    FlexString             `json:"result,omitempty"`    // 如果 type=finish，最终结果（可为字符串或 JSON 对象）
 }
 
 // AgentDecision V6 版本的 Agent 决策
@@ -39,6 +39,17 @@ type AgentDecision struct {
 	Context      interface{} `json:"context,omitempty"` // 上下文信息（可选）
 }
 
+// GuidedSlowLogPreamble 供 agent-run 使用：建议完整走 RAG → MCP → 结论（建索引仅 dry_run）。
+const GuidedSlowLogPreamble = `【推荐分析流程（请尽量按序执行，每步说明 reasoning）】
+1. retrieve_rag：查询与 Rows_examined、全表扫描、复合索引左前缀相关的知识
+2. call_tool connect_mysql_instance：确认 test 库可用
+3. call_tool explain_mysql_query：对慢日志中的 SELECT 做 EXPLAIN（database=test；SQL 与慢日志一致）
+4. call_tool add_mysql_index：仅 dry_run=true 给出索引 DDL；表 products 列为 code, price, created_at（勿编造 category_id）；禁止 dry_run=false
+5. analyze：结合 RAG、EXPLAIN、慢日志与真实表结构归纳根因
+6. finish：输出最终诊断、建议索引列、预期收益与风险
+
+`
+
 // BuildAgentPromptV6 构建 V6 版本的 Agent prompt
 // V6 版本让 LLM 自主决定下一步行动，而不仅仅是调用工具
 func BuildAgentPromptV6(
@@ -46,6 +57,7 @@ func BuildAgentPromptV6(
 	availableTools []CapabilityV4,
 	conversationHistory []string, // 对话历史（可选）
 	currentContext map[string]interface{}, // 当前上下文（已执行的工具结果、RAG 检索结果等）
+	extraGuide string, // 可选，推荐流程说明（agent-run）
 ) string {
 	var sb strings.Builder
 
@@ -59,6 +71,13 @@ func BuildAgentPromptV6(
 4. 当你有足够信息给出最终分析结果时，选择 finish
 
 `)
+	if strings.TrimSpace(extraGuide) != "" {
+		sb.WriteString(extraGuide)
+		if !strings.HasSuffix(extraGuide, "\n") {
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n")
+	}
 
 	// 2. 可用工具列表
 	if len(availableTools) > 0 {
@@ -143,15 +162,15 @@ func BuildAgentPromptV6(
     "rag_query": "如果 type=retrieve_rag，检索查询",
     "analysis": "如果 type=analyze，分析内容",
     "question": "如果 type=ask_question，问题内容",
-    "result": "如果 type=finish，最终分析结果（包含问题诊断和优化建议）"
+    "result": "如果 type=finish，最终分析结果（必须是字符串，勿用 JSON 对象；含问题诊断与优化建议）"
   }
 }
 
 【重要提示】
 1. 每一步都要有明确的 reasoning（为什么选择这个行动）
-2. 如果选择 call_tool，必须提供正确的 tool_name 和 tool_args
+2. 调用 MCP 工具时：type 必须是 "call_tool"，工具名写在 tool_name（如 analyze_slow_log），禁止把工具名写在 type
 3. 如果选择 retrieve_rag，rag_query 应该是有针对性的查询（例如："rows_examined 高如何优化"）
-4. 如果选择 finish，result 应该是完整的分析报告（问题诊断 + 优化建议）
+4. 如果选择 finish，result 必须是字符串类型的完整分析报告（禁止把 result 写成 JSON 对象）
 5. 输出必须是有效的 JSON，可以直接被程序解析
 
 现在请分析慢日志，并决定下一步要做什么：
@@ -184,16 +203,52 @@ func ParseAgentDecision(llmOutput string) (*AgentDecision, error) {
 		return nil, fmt.Errorf("failed to parse JSON: %w. Extracted JSON (first 500 chars): %s", err, debugJSON)
 	}
 
-	// 验证行动类型
-	if decision.NextAction.Type != ActionCallTool &&
-		decision.NextAction.Type != ActionRetrieveRAG &&
-		decision.NextAction.Type != ActionAnalyze &&
-		decision.NextAction.Type != ActionAskQuestion &&
-		decision.NextAction.Type != ActionFinish {
-		return nil, fmt.Errorf("invalid action type: %s", decision.NextAction.Type)
+	normalizeNextAction(&decision.NextAction)
+
+	if err := validateNextAction(decision.NextAction); err != nil {
+		return nil, err
 	}
 
 	return &decision, nil
+}
+
+// knownMCPToolNames 模型常误把工具名写在 type 里，此处做兼容归一化。
+var knownMCPToolNames = map[string]struct{}{
+	"analyze_slow_log":       {},
+	"connect_mysql_instance": {},
+	"explain_mysql_query":    {},
+	"add_mysql_index":        {},
+}
+
+func normalizeNextAction(na *NextAction) {
+	t := strings.TrimSpace(string(na.Type))
+	if t == "" {
+		return
+	}
+	if _, isTool := knownMCPToolNames[t]; isTool {
+		if na.ToolName == "" {
+			na.ToolName = t
+		}
+		na.Type = ActionCallTool
+		return
+	}
+	// 偶发：type=call_tool 但工具名写在 type 的变体 call_tool_xxx
+	if strings.HasPrefix(t, "call_tool_") {
+		name := strings.TrimPrefix(t, "call_tool_")
+		if na.ToolName == "" {
+			na.ToolName = name
+		}
+		na.Type = ActionCallTool
+	}
+}
+
+func validateNextAction(na NextAction) error {
+	switch na.Type {
+	case ActionCallTool, ActionRetrieveRAG, ActionAnalyze, ActionAskQuestion, ActionFinish:
+		return nil
+	default:
+		return fmt.Errorf("invalid action type: %s (调用工具时请用 type=call_tool 且 tool_name=工具名)", na.Type)
+	}
 }
 
 // extractJSON 从文本中提取 JSON（可能包含在 markdown 代码块中）
