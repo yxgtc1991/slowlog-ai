@@ -19,6 +19,7 @@ type AgentRoundRecord struct {
 	Round         int                 `json:"round"`
 	LLMRaw        string              `json:"llm_raw"`
 	CurrentState  string              `json:"current_state,omitempty"`
+	AgentPhase    string              `json:"agent_phase,omitempty"`
 	Action        promptv6.NextAction `json:"action"`
 	ActionError   string              `json:"action_error,omitempty"`
 	ActionOutcome interface{}         `json:"action_outcome,omitempty"`
@@ -37,6 +38,8 @@ type V6AgentRunReport struct {
 	RAGResults     []RAGResult            `json:"rag_results"`
 	History        []string               `json:"conversation_history"`
 	AvailableTools []string               `json:"available_tools,omitempty"`
+	FinalPhase     string                 `json:"final_phase,omitempty"`
+	AgentState     *AgentState            `json:"agent_state,omitempty"`
 }
 
 // BuildV6RunReport 从 Analyze 结果组装报告（需 Analyze 时开启 round 记录）。
@@ -55,6 +58,8 @@ func BuildV6RunReport(slowLog string, result *V6AgentResult, toolNames []string)
 		RAGResults:     result.RAGResults,
 		History:        result.ConversationHistory,
 		AvailableTools: toolNames,
+		FinalPhase:     string(result.FinalPhase),
+		AgentState:     result.State,
 	}
 }
 
@@ -119,6 +124,9 @@ func formatV6ReportMarkdown(r *V6AgentRunReport, jsonFile string) string {
 	for _, round := range r.Rounds {
 		b.WriteString(fmt.Sprintf("### 第 %d 轮\n\n", round.Round))
 		b.WriteString(fmt.Sprintf("**当前状态**：%s\n\n", mdSafeText(emptyFallback(round.CurrentState, "—"))))
+		if round.AgentPhase != "" {
+			b.WriteString(fmt.Sprintf("**状态机阶段**：`%s`\n\n", mdSafeText(round.AgentPhase)))
+		}
 		na := round.Action
 		b.WriteString(fmt.Sprintf("**行动**：`%s`\n\n", mdSafeText(string(na.Type))))
 		b.WriteString(fmt.Sprintf("**理由**：%s\n\n", mdSafeText(na.Reasoning)))
@@ -283,12 +291,4 @@ func formatOutcomePlain(out interface{}) string {
 		}
 		return sanitizeUTF8(string(body))
 	}
-}
-
-func contextKeys(m map[string]interface{}) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
 }

@@ -58,6 +58,10 @@ func assertResult(result *analyzer.V6AgentResult, exp Expect) []string {
 		}
 	}
 
+	if exp.FinalPhase != "" && string(result.FinalPhase) != exp.FinalPhase {
+		errs = append(errs, fmt.Sprintf("final_phase=%q want %q", result.FinalPhase, exp.FinalPhase))
+	}
+
 	if exp.NoActionErrors && len(result.Rounds) > 0 {
 		for _, r := range result.Rounds {
 			if r.ActionError != "" {

@@ -1,0 +1,11 @@
+---
+description: slowlog-ai 文档与对外文案约定
+globs: "**/*.md,**/README*,**/docs/**"
+alwaysApply: false
+---
+
+# 文档与注释约定
+
+- 文档、README、注释、提交说明中**不要使用「面试」字样**。
+- 用「复盘」「汇报」「演示」「工程化」「对外讲解」等表述替代。
+- Markdown 跨文件链接：优先在目标标题行尾写显式锚点 `{#ascii-id}`（如 `{#v5-vs-v6}`），避免 GoLand 与脚本 slug 不一致导致「找不到标头」。

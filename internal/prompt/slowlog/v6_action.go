@@ -43,8 +43,8 @@ type AgentDecision struct {
 const GuidedSlowLogPreamble = `【推荐分析流程（请尽量按序执行，每步说明 reasoning）】
 1. retrieve_rag：查询与 Rows_examined、全表扫描、复合索引左前缀相关的知识
 2. call_tool connect_mysql_instance：确认 test 库可用
-3. call_tool explain_mysql_query：对慢日志中的 SELECT 做 EXPLAIN（database=test；SQL 与慢日志一致）
-4. call_tool add_mysql_index：仅 dry_run=true 给出索引 DDL；表 products 列为 code, price, created_at（勿编造 category_id）；禁止 dry_run=false
+3. call_tool explain_mysql_query：对慢日志中的 SELECT 做 EXPLAIN（database=test；sql 必须从慢日志原文复制，表为 products，禁止 orders 等其他表）
+4. call_tool add_mysql_index：仅 dry_run=true 给出索引 DDL；表 products 列为 code, price, created_at（勿编造 category_id、orders）；禁止 dry_run=false
 5. analyze：结合 RAG、EXPLAIN、慢日志与真实表结构归纳根因
 6. finish：输出最终诊断、建议索引列、预期收益与风险
 
@@ -56,7 +56,7 @@ func BuildAgentPromptV6(
 	slowLog string,
 	availableTools []CapabilityV4,
 	conversationHistory []string, // 对话历史（可选）
-	currentContext map[string]interface{}, // 当前上下文（已执行的工具结果、RAG 检索结果等）
+	contextSummary string, // 类型化状态摘要（阶段 + RAG/工具要点，控 Token）
 	extraGuide string, // 可选，推荐流程说明（agent-run）
 ) string {
 	var sb strings.Builder
@@ -124,15 +124,11 @@ func BuildAgentPromptV6(
 
 `)
 
-	// 4. 当前上下文（已执行的操作和结果）
-	if len(currentContext) > 0 {
-		sb.WriteString("【当前上下文】\n")
-		sb.WriteString("以下是已经执行的操作和结果：\n\n")
-		for key, value := range currentContext {
-			sb.WriteString(fmt.Sprintf("- %s:\n", key))
-			valueJSON, _ := json.MarshalIndent(value, "  ", "  ")
-			sb.WriteString(fmt.Sprintf("  %s\n\n", string(valueJSON)))
-		}
+	// 4. Agent 状态与上下文摘要（类型化状态机，非完整 JSON  dump）
+	if strings.TrimSpace(contextSummary) != "" {
+		sb.WriteString("【Agent 状态与上下文摘要】\n")
+		sb.WriteString(contextSummary)
+		sb.WriteString("\n\n")
 	}
 
 	// 5. 对话历史（如果有）
@@ -148,6 +144,8 @@ func BuildAgentPromptV6(
 	sb.WriteString("【慢日志内容】\n")
 	sb.WriteString(slowLog)
 	sb.WriteString("\n\n")
+	sb.WriteString("【慢日志 SQL 约束】\n")
+	sb.WriteString("调用 explain_mysql_query 时，tool_args.sql 必须与上方慢日志中的 SELECT 语句完全一致（含 FROM 的表名，如 products），不得臆造 orders 等未出现的表。\n\n")
 
 	// 7. 输出格式要求
 	sb.WriteString(`【输出格式】

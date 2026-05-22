@@ -8,8 +8,8 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 
 | 命令 | 一步说明 | 需要 API Key | 需要 MySQL |
 |------|----------|:------------:|:----------:|
-| `make run` | 控制台跑一遍 **V6 Agent**（默认慢日志） | ✓ | 可选 |
-| `make agent-run` | **完整跑通** + 写入 `reports/`（HTML/MD/JSON，可复盘） | ✓ | 推荐 |
+| `make run` | 控制台跑 **V6**；默认 `testdata/slowlog-products.txt`（`products` 表） | ✓ | 推荐 |
+| `make agent-run` | 同上慢日志 + 写入 `reports/`（HTML/MD/JSON，可复盘） | ✓ | 推荐 |
 | `make agent-eval` | **回归测试**：标准用例检查轨迹与结论，**不调 LLM** | — | — |
 | `make mysql-check` | 只测 `.env` 里 MySQL 能否连通 | — | ✓ |
 | `make report-md JSON=reports/xxx.json` | 从已有 JSON **重生** MD/HTML，不重跑 Agent | — | — |
@@ -36,20 +36,24 @@ make run                # 轻量演示
 ## V6 Agent 执行流程
 
 ```text
-拼 Prompt → LLM 输出 NextAction → 执行 → 结果写入 context → 下一轮 … → finish 结束
+拼 Prompt（含状态机摘要）→ LLM 输出 NextAction → 执行 → 写入 AgentState → 下一轮 … → finish
 ```
 
 | `NextAction.type` | 本轮做什么 |
 |-------------------|------------|
-| `retrieve_rag` | 查知识库，结果进 `context` |
-| `call_tool` | 调 MCP（慢日志分析 / 连库 / EXPLAIN / 建索引 dry_run） |
-| `analyze` | 把中间结论写进 `context` |
+| `retrieve_rag` | 查知识库，写入 **AgentState** 摘要 |
+| `call_tool` | 调 MCP（连库 / **EXPLAIN** / 建索引 dry_run 等） |
+| `analyze` | 中间结论写入 AgentState |
 | `ask_question` | 记录待问（演示模式不暂停等人） |
 | `finish` | 输出最终 `result`，**结束** |
 
 流程图：[docs/diagrams/v6-agent-flow.md](docs/diagrams/v6-agent-flow.md)
 
 **`make agent-run` 推荐顺序（guided）**：RAG → 连库 → EXPLAIN → 索引 dry_run → analyze → finish → 打开 `reports/*.brief.html` 看逐轮。
+
+**默认演示库表**：`test.products`（列 `code`, `price`, `created_at`），慢日志见 `testdata/slowlog-products.txt`。  
+**EXPLAIN**：`sql` 须与慢日志里 SELECT 一致；若模型写成 `orders` 等错误表名，运行时会 **自动改回慢日志 SQL**。  
+**AgentState**：阶段 `init → rag_done → db_ready → explained → … → finished`，Prompt 只带摘要（不重复灌整段工具 JSON）。
 
 ---
 
@@ -86,7 +90,7 @@ make run                # 轻量演示
 |------|------|
 | `analyze_slow_log` | 慢日志结构化分析 |
 | `connect_mysql_instance` | 校验 MySQL |
-| `explain_mysql_query` | SELECT 的 EXPLAIN |
+| `explain_mysql_query` | 对慢日志里那条 SELECT 做 EXPLAIN（须 `products` 等真实表） |
 | `add_mysql_index` | 建索引 DDL（默认 **dry_run**） |
 
 ---
@@ -97,7 +101,7 @@ make run                # 轻量演示
 cmd/slowlog-ai/     # 默认 V6 演示
 cmd/agent-run/      # 全流程 + reports/
 cmd/agent-eval/     # 回归（标准用例）
-internal/analyzer/  # V1–V6，含 v6_agent、报告
+internal/analyzer/  # V1–V6；v6_agent、agent_state、slowlog_sql
 internal/eval/      # 回归逻辑
 internal/mcp/ · mysql/ · rag/ · llm/
 docs/               # ROADMAP、RUN、EVAL、VERSIONS、ARCHITECTURE
@@ -108,7 +112,7 @@ testdata/           # slowlog-products.txt 等
 
 ## 环境
 
-Go 1.23+ · `DEEPSEEK_API_KEY` · 本地演示建议 `MYSQL_DATABASE=test` 与 `testdata/slowlog-products.txt` 中表结构一致。
+Go 1.23+ · `DEEPSEEK_API_KEY` · 本地需 **`test.products`**（与 `testdata/slowlog-products.txt` 一致）；`.env` 设 `MYSQL_DATABASE=test`。
 
 ```bash
 make deps          # go mod tidy（内网可设 GOPROXY，见 Makefile）

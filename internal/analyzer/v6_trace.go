@@ -41,7 +41,7 @@ func (a *V6AgentAnalyzer) tracef(format string, args ...interface{}) {
 
 func (a *V6AgentAnalyzer) traceRoundStart(iter int) {
 	a.tracef("\n%s\n", strings.Repeat("=", 62))
-	a.tracef("🔄 第 %d / %d 轮\n", iter, a.maxIterations)
+	a.tracef("🔄 第 %d / %d 轮  阶段=%s\n", iter, a.maxIterations, a.state.Phase)
 	a.tracef("%s\n", strings.Repeat("-", 62))
 }
 
@@ -83,46 +83,48 @@ func (a *V6AgentAnalyzer) traceAfterAction(action promptv6.NextAction, toolResul
 	a.tracef("\n【本步执行结果】\n")
 	switch action.Type {
 	case promptv6.ActionCallTool:
-		if errMsg, ok := a.context[fmt.Sprintf("tool_%s_error", action.ToolName)].(string); ok {
-			a.tracef("  ❌ 工具 %s 失败: %s\n", action.ToolName, errMsg)
+		if ent, ok := a.state.Tools[action.ToolName]; ok && ent.Error != "" {
+			a.tracef("  ❌ 工具 %s 失败: %s\n", action.ToolName, ent.Error)
 			return
 		}
 		if res, ok := toolResults[action.ToolName]; ok {
 			a.traceDumpJSON(fmt.Sprintf("  ✅ 工具 %s 返回", action.ToolName), res, 1200)
 		}
 	case promptv6.ActionRetrieveRAG:
-		if errMsg, ok := a.context[fmt.Sprintf("rag_%s_error", action.RAGQuery)].(string); ok {
-			a.tracef("  ❌ RAG 失败: %s\n", errMsg)
+		for i := len(a.state.RAG) - 1; i >= 0; i-- {
+			r := a.state.RAG[i]
+			if r.Query != action.RAGQuery {
+				continue
+			}
+			if r.Error != "" {
+				a.tracef("  ❌ RAG 失败: %s\n", r.Error)
+				return
+			}
+			a.tracef("  ✅ RAG 命中 %d 条: %s\n", r.ChunkCount, strings.Join(r.Titles, "; "))
 			return
 		}
 		if lastRAG != nil {
 			a.tracef("  ✅ RAG 命中 %d 条\n", len(lastRAG.Chunks))
-			for i, ch := range lastRAG.Chunks {
-				if m, ok := ch.(map[string]interface{}); ok {
-					a.tracef("     [%d] %v\n", i+1, m["title"])
-				}
-			}
 		}
 	case promptv6.ActionAnalyze:
-		a.traceDumpText("  写入上下文 analysis", action.Analysis, 300)
+		a.traceDumpText("  写入状态 analysis", action.Analysis, 300)
 	case promptv6.ActionAskQuestion:
 		a.tracef("  已记录问题（演示模式不等待用户输入）\n")
 	case promptv6.ActionFinish:
 		a.tracef("  进入 finish，结束循环\n")
 	}
-	a.traceContextKeys()
+	a.traceStateSummary()
 }
 
-func (a *V6AgentAnalyzer) traceContextKeys() {
-	if len(a.context) == 0 {
+func (a *V6AgentAnalyzer) traceStateSummary() {
+	if a.state == nil {
 		return
 	}
-	a.tracef("\n【累计上下文键】 %d 个: ", len(a.context))
-	keys := make([]string, 0, len(a.context))
-	for k := range a.context {
-		keys = append(keys, k)
+	a.tracef("\n【状态机】%s\n", a.state.Phase)
+	sum := a.state.PromptSummary(300)
+	if sum != "" {
+		a.tracef("【Prompt 摘要】\n%s\n", sum)
 	}
-	a.tracef("%s\n", strings.Join(keys, ", "))
 }
 
 func (a *V6AgentAnalyzer) traceDumpJSON(prefix string, v interface{}, max int) {
@@ -154,7 +156,8 @@ func PrintV6AgentSummary(result *V6AgentResult, verbose bool) {
 		return
 	}
 	fmt.Println("\n" + strings.Repeat("=", 60))
-	fmt.Printf("🤖 Agent 执行轨迹：%d 轮迭代，%d 个行动\n", result.Iterations, len(result.Actions))
+	fmt.Printf("🤖 Agent 执行轨迹：%d 轮迭代，%d 个行动，终态=%s\n",
+		result.Iterations, len(result.Actions), result.FinalPhase)
 	for i, action := range result.Actions {
 		fmt.Printf("\n  %d. [%s] %s\n", i+1, action.Type, action.Reasoning)
 		switch action.Type {
@@ -200,5 +203,10 @@ func PrintV6AgentSummary(result *V6AgentResult, verbose bool) {
 		for _, line := range result.ConversationHistory {
 			fmt.Printf("  · %s\n", line)
 		}
+	}
+	if verbose && result.State != nil {
+		fmt.Println("\n" + strings.Repeat("-", 60))
+		fmt.Println("📋 终态上下文摘要（与 Prompt 一致）")
+		fmt.Println(result.State.PromptSummary(500))
 	}
 }

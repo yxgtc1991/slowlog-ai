@@ -104,6 +104,8 @@ analyzer := analyzer.NewAnalyzer(
 
 各版本 Prompt 与 Agent 行为详见 [VERSIONS.md](VERSIONS.md)。
 
+**V6 `AgentState`**（`internal/analyzer/agent_state.go`）：用阶段 `init → rag_done → db_ready → explained → index_planned → analyzed → finished` 替代 `map[string]interface{}`；每轮 Prompt 只注入 `PromptSummary()`（工具要点 + RAG 标题），完整工具 JSON 仍写入报告 `tool_results`，不重复灌进 LLM。
+
 ### v1-v3-example
 
 **V1–V3 集成示例**（V3 + RAG）：

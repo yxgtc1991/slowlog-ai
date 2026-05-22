@@ -43,28 +43,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, "ℹ️  Agent 轨迹已开启（stderr 每轮输出，结束后再打汇总）")
 	}
 
-	// 示例慢日志
-	slowLog := `
-# Time: 2025-01-05T10:12:33.123456Z
-# User@Host: app_user[app_user] @ 10.0.0.12 []
-# Query_time: 12.456  Lock_time: 0.001
-# Rows_sent: 10  Rows_examined: 1250000
-SET timestamp=1736071953;
-SELECT *
-FROM orders
-WHERE user_id = 123
-ORDER BY created_at DESC
-LIMIT 10;
-`
-
-	// 支持从命令行参数读取慢日志文件（跳过 -agent-trace 等 flag）
-	if filePath := slowLogFileArg(); filePath != "" {
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			log.Fatalf("Failed to read slow log file: %v", err)
-		}
-		slowLog = string(content)
-	}
+	const defaultSlowLogPath = "testdata/slowlog-products.txt"
+	slowLog := readSlowLogOrFatal(slowLogFileArg(), defaultSlowLogPath)
 
 	ctx := context.Background()
 
@@ -206,4 +186,17 @@ LIMIT 10;
 	fmt.Println(v6Result.FinalResult)
 
 	analyzer.PrintV6AgentSummary(v6Result, agentTrace)
+}
+
+// readSlowLogOrFatal 优先读命令行路径，否则读默认 products 慢日志（与 agent-run 一致）。
+func readSlowLogOrFatal(fileArg, defaultPath string) string {
+	path := defaultPath
+	if fileArg != "" {
+		path = fileArg
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("read slow log %s: %v", path, err)
+	}
+	return string(content)
 }

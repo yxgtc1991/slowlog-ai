@@ -17,7 +17,7 @@ func (c *ExplainMySQLQueryCapability) Name() string {
 }
 
 func (c *ExplainMySQLQueryCapability) Description() string {
-	return "对单条 SELECT 语句执行 EXPLAIN，返回执行计划（仅允许 SELECT，禁止多语句）。可先 connect_mysql_instance 切到 test 库，或传 database=test。示例表：test.products。"
+	return "对单条 SELECT 语句执行 EXPLAIN，返回执行计划（仅允许 SELECT，禁止多语句）。sql 必须与慢日志中的 SELECT 一致；演示库表为 test.products（列 code, price, created_at），勿使用 orders 等未在慢日志出现的表。"
 }
 
 func (c *ExplainMySQLQueryCapability) InputSchema() map[string]string {

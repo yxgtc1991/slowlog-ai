@@ -37,10 +37,10 @@ func AllCases() []Case {
 					"sql":      "SELECT * FROM products WHERE price >= 100 ORDER BY created_at DESC LIMIT 20",
 				})),
 				decisionJSON("dry_run 建索引", callTool("add_mysql_index", map[string]interface{}{
-					"table":       "products",
-					"index_name":  "idx_price_created",
-					"columns":     []string{"price", "created_at"},
-					"dry_run":     true,
+					"table":      "products",
+					"index_name": "idx_price_created",
+					"columns":    []string{"price", "created_at"},
+					"dry_run":    true,
 				})),
 				decisionJSON("归纳根因", analyze("WHERE 仅 price，复合索引左前缀用不上，Rows_examined 高")),
 				decisionJSON("输出结论", finish(
@@ -66,6 +66,7 @@ func AllCases() []Case {
 				MinIterations:  6,
 				MaxIterations:  6,
 				NoActionErrors: true,
+				FinalPhase:     "finished",
 			},
 		},
 		{

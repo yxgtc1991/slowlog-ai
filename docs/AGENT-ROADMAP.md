@@ -55,6 +55,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | V6 Agent 循环 | `retrieve_rag` / `call_tool` / `analyze` / `ask_question` / `finish` | `make run` |
 | MCP | 慢日志分析、连库、EXPLAIN、建索引 dry_run | [ARCHITECTURE · MCP](ARCHITECTURE.md#mcp) |
 | 轨迹 | stderr 每轮决策 | `SLOWLOG_AGENT_TRACE=1` … `-agent-trace` |
+| 类型化状态 | `AgentState` 阶段机 + Prompt 摘要（控 Token） | `agent_state.go` |
 | 报告存档 | JSON + 完整/精简 MD/HTML | `make agent-run` → [AGENT-RUN](AGENT-RUN.md) |
 | 报告重生 | 从 JSON 再生成 MD/HTML | `make report-md JSON=reports/xxx.json` |
 | LLM 容错 | 工具名误写 `type`、`finish` 的 object `result` | `v6_action.go` · `flex_string.go` |
@@ -68,7 +69,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | 优先级 | 目标 | 价值 | 状态 |
 |:------:|------|------|:----:|
 | P0 | **Agent Eval**（golden case、轨迹/结论断言） | 证明可回归、工程化 | **已实现** → [AGENT-EVAL](AGENT-EVAL.md) |
-| P0 | **类型化 AgentState** + context 摘要进 Prompt | 状态机、控 Token | 计划 |
+| P0 | **类型化 AgentState** + context 摘要进 Prompt | 状态机、控 Token | **已实现** |
 | P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | 计划 |
 | P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | 计划 |
 | P1 | **真 RAG**（chunk + 向量/TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | 计划 |

@@ -15,6 +15,7 @@ type Expect struct {
 	MaxIterations    int
 	ToolsMustCall    []string // 轨迹中须出现过的 call_tool（顺序不限）
 	NoActionErrors   bool     // 每轮 ActionError 为空
+	FinalPhase       string   // 期望终态，如 finished
 }
 
 // Case 一条 golden eval：脚本化 LLM + 断言。
