@@ -11,7 +11,8 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 | `make run` | 控制台跑 **V6**；默认 `testdata/slowlog-products.txt`（`products` 表） | ✓ | 推荐 |
 | `make agent-run` | 同上慢日志 + 写入 `reports/`（HTML/MD/JSON，可复盘） | ✓ | 推荐 |
 | `make agent-eval` | **回归测试**：标准用例检查轨迹与结论，**不调 LLM** | — | — |
-| `make rag-check` | **TF-IDF 检索** slowlog 知识库（可传查询词） | — | — |
+| `make rag-check` | RAG 检索试跑（默认 **TF-IDF**，可传查询词） | — | — |
+| `make rag-check-compare` | 并排对比 **tfidf** vs **embedding**（本地向量） | — | — |
 | `make mysql-check` | 只测 `.env` 里 MySQL 能否连通 | — | ✓ |
 | `make report-md JSON=reports/xxx.json` | 从已有 JSON **重生** MD/HTML，不重跑 Agent | — | — |
 | `make doc-links` | 校验文档内 Markdown 链接与锚点 | — | — |
@@ -31,6 +32,28 @@ make run                # 轻量演示
 | [AGENT-EVAL](docs/AGENT-EVAL.md) | 回归测什么、如何对比 `agent-run` |
 | [VERSIONS](docs/VERSIONS.md) | V1–V6 设计与代码示例 |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | 接口、MCP、扩展开发 |
+| **[RAG 怎么用](docs/RAG.md)** | **模式、环境变量、命令示例（必读）** |
+
+---
+
+## RAG 检索怎么用（简版）
+
+> 完整说明：[docs/RAG.md](docs/RAG.md)
+
+| `SLOWLOG_RAG` | 用途 |
+|---------------|------|
+| `tfidf`（**默认**） | `make run` / `agent-run`，关键词检索 |
+| `embedding` | 内存向量 TopK；配合 `SLOWLOG_EMBEDDING_PROVIDER=local` 或 `http` |
+| `mock` | `make agent-eval`，固定结果、可回归 |
+
+```bash
+make rag-check                              # 默认 TF-IDF
+make rag-check "rows_examined 全表扫描"      # 自定义查询
+make rag-check-compare                      # 对比 tfidf / embedding（无需 API Key）
+SLOWLOG_RAG=embedding make rag-check        # 试向量（默认 local，不调 API）
+```
+
+`.env` 示例见 `.env.example` 中 `SLOWLOG_RAG*` / `SLOWLOG_EMBEDDING_*`。
 
 ---
 

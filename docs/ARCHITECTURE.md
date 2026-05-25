@@ -252,7 +252,7 @@ make vendor  # 同步 vendor/ 后可直接 go build
 
 ## 📚 知识库
 
-RAG 知识库位于 `internal/rag/slowlog/docs/`（**默认 `TFIDFRetriever` TopK**，`SLOWLOG_RAG=mock` 时用 `MockRetriever`）。流程图：[diagrams/rag-flow.md](diagrams/rag-flow.md)。包含：
+RAG 知识库位于 `internal/rag/slowlog/docs/`（按 **`##` 切 chunk**；**默认 `TFIDFRetriever`**，`SLOWLOG_RAG=embedding` 为内存向量 TopK，`mock` 用于 eval）。**用法**：[RAG.md](RAG.md) · 流程图：[diagrams/rag-flow.md](diagrams/rag-flow.md)。包含：
 
 - **patterns/**: 性能问题模式（如 `rows_examined_high.md`）
 - **anti-patterns/**: 常见误解（如 `limit_not_fast.md`）

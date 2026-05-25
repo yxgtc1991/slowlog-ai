@@ -63,7 +63,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [AGENT-EVAL](AGENT-EVAL.md) |
 | 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
 | 结构化 Trace | `llm.chat` / `tool.*` span + 耗时进 JSON/brief | `trace.go` · `agent-run` 且记录 rounds 时 |
-| 真 RAG | TF-IDF TopK 检索 `slowlog/docs` | `make rag-check` · [RAG 流程图](diagrams/rag-flow.md) |
+| 真 RAG | 按 `##` chunk + TF-IDF / embedding | [RAG 怎么用](RAG.md) · `make rag-check` |
 
 ---
 
@@ -100,7 +100,8 @@ make report-md JSON=reports/agent-run-xxx.json
 make mysql-check              # 仅测 MySQL
 make doc-links                # 校验 md 链接
 make agent-eval               # V6 golden 回归（无 API）
-make rag-check                # TF-IDF 检索试跑（无 API）
+make rag-check                # RAG 试跑（见 RAG.md）
+make rag-check-compare        # tfidf vs embedding
 
 # 观察每轮决策（stderr）
 SLOWLOG_AGENT_TRACE=1 go run ./cmd/slowlog-ai -agent-trace

@@ -3,11 +3,8 @@ package rag
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"math"
-	"path/filepath"
 	"sort"
-	"strings"
 )
 
 // TFIDFRetriever 基于知识库 Markdown 的 TF-IDF 检索（无向量库依赖）。
@@ -21,45 +18,32 @@ type scoredChunk struct {
 	tf    map[string]float64
 }
 
-type rawDoc struct {
-	title   string
-	content string
-	source  string
-}
-
 // TFIDFOptions 检索器配置。
 type TFIDFOptions struct {
 	TopK int
 }
 
-// NewTFIDFRetriever 从嵌入的 slowlog/docs 构建索引。
+// NewTFIDFRetriever 从嵌入的 slowlog/docs 构建索引（按 ## 切 chunk）。
 func NewTFIDFRetriever(opts TFIDFOptions) (*TFIDFRetriever, error) {
 	topK := opts.TopK
 	if topK <= 0 {
 		topK = 3
 	}
-	raw, err := loadEmbeddedDocs()
+	raw, err := loadKnowledgeChunks()
 	if err != nil {
 		return nil, err
-	}
-	if len(raw) == 0 {
-		return nil, fmt.Errorf("no knowledge documents found")
 	}
 	df := make(map[string]int)
 	chunks := make([]scoredChunk, 0, len(raw))
 	for _, doc := range raw {
-		tokens := tokenize(doc.title + " " + doc.content)
+		tokens := tokenize(doc.Title + " " + doc.Content)
 		tf := termFreq(tokens)
 		for term := range tf {
 			df[term]++
 		}
 		chunks = append(chunks, scoredChunk{
-			chunk: KnowledgeChunk{
-				Title:   doc.title,
-				Content: truncateContent(doc.content, 600),
-				Source:  doc.source,
-			},
-			tf: tf,
+			chunk: doc,
+			tf:    tf,
 		})
 	}
 	nDocs := float64(len(chunks))
@@ -118,68 +102,4 @@ func dotProduct(a, b map[string]float64) float64 {
 		}
 	}
 	return s
-}
-
-func loadEmbeddedDocs() ([]rawDoc, error) {
-	var docs []rawDoc
-	err := fs.WalkDir(slowlogDocsFS, "slowlog/docs", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-		b, err := fs.ReadFile(slowlogDocsFS, path)
-		if err != nil {
-			return err
-		}
-		title, body := parseMarkdownDoc(string(b))
-		docs = append(docs, rawDoc{
-			title:   title,
-			content: body,
-			source:  sourceFromPath(path),
-		})
-		return nil
-	})
-	return docs, err
-}
-
-func parseMarkdownDoc(raw string) (title, body string) {
-	lines := strings.Split(raw, "\n")
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "# ") {
-			title = strings.TrimPrefix(line, "# ")
-			body = strings.TrimSpace(strings.Join(lines[i+1:], "\n"))
-			return title, body
-		}
-	}
-	return "", strings.TrimSpace(raw)
-}
-
-func sourceFromPath(path string) string {
-	dir := filepath.Dir(path)
-	base := filepath.Base(dir)
-	switch base {
-	case "patterns":
-		return "pattern"
-	case "anti-patterns":
-		return "anti-pattern"
-	case "metrics":
-		return "metric"
-	case "actions":
-		return "action"
-	case "boundaries":
-		return "boundary"
-	default:
-		return base
-	}
-}
-
-func truncateContent(s string, max int) string {
-	s = strings.TrimSpace(s)
-	if len(s) <= max {
-		return s
-	}
-	return s[:max] + "…"
 }
