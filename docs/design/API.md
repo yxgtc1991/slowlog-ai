@@ -24,7 +24,7 @@ SLOWLOG_API_ADDR=:8080 go run ./cmd/agent-api
 | `SLOWLOG_INGEST_MIN_QUERY_TIME` | `0` | 低于该 Query_time（秒）则跳过 |
 | `SLOWLOG_API_PUBLIC_URL` | （空） | 响应中 `report_url` 前缀，如 `http://host:8080` |
 
-G14 多实例与审计见 [OPS.md](OPS.md)。
+G14/G15 运维变量见 [OPS.md](OPS.md)。
 
 ---
 
@@ -33,8 +33,10 @@ G14 多实例与审计见 [OPS.md](OPS.md)。
 ### `GET /v1/health`
 
 ```json
-{"status":"ok"}
+{"status":"ok","limits":{"rate_limit_per_min":10,"rate_used_this_min":1}}
 ```
+
+（`limits` 仅在启用限流时出现。）
 
 ### `GET /v1/instances`
 
@@ -65,7 +67,7 @@ G14 多实例与审计见 [OPS.md](OPS.md)。
 }
 ```
 
-**错误**：`{"error":"..."}`（400/500）
+**错误**：`{"error":"..."}`（400/429/503/500）
 
 ### `GET /v1/reports/{report_id}`
 

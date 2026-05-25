@@ -10,6 +10,10 @@ import (
 )
 
 func (s *server) wrap(mux http.Handler) http.Handler {
+	h := mux
+	if s.limits != nil && s.limits.Enabled() {
+		h = s.limits.Middleware(h)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rid := strings.TrimSpace(r.Header.Get("X-Request-ID"))
 		if rid == "" {
@@ -17,7 +21,7 @@ func (s *server) wrap(mux http.Handler) http.Handler {
 		}
 		ctx := ops.ContextWithRequestID(r.Context(), rid)
 		w.Header().Set("X-Request-ID", rid)
-		mux.ServeHTTP(w, r.WithContext(ctx))
+		h.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

@@ -1,8 +1,8 @@
-# 运维：多实例与审计（G14）
+# 运维：多实例、审计与限流（G14 / G15）
 
 [API](API.md) · [生产化缺口](../agent/PRODUCTION-GAPS.md)
 
-PoC 级进程内能力：多库实例元数据 + 操作可追溯，非完整 SaaS 多租户。
+PoC 级进程内能力：多库实例元数据 + 操作可追溯 + 成本护栏，非完整 SaaS 多租户。
 
 ---
 
@@ -60,10 +60,26 @@ Authorization: Bearer <SLOWLOG_ADMIN_TOKEN>
 
 ---
 
+## G15 限流与配额
+
+| 环境变量 | 默认 | 说明 |
+|----------|------|------|
+| `SLOWLOG_RATE_LIMIT_PER_MIN` | `0`（关） | 全进程每分钟分析次数 |
+| `SLOWLOG_DAILY_ANALYZE_QUOTA` | `0`（关） | 自然日分析次数 |
+| `SLOWLOG_MAX_CONCURRENT` | `0`（关） | 同时进行中的 analyze/ingest/rebuild |
+
+对 `/v1/analyze`、`/v1/ingest`、`POST /v1/rag/rebuild` 生效；超限返回 429 或 503。
+
+`GET /v1/health` 在启用限流时附带 `limits` 计数快照。
+
+---
+
 ## 示例
 
 ```bash
 export SLOWLOG_INSTANCES_FILE=config/instances.example.json
+export SLOWLOG_RATE_LIMIT_PER_MIN=10
+export SLOWLOG_DAILY_ANALYZE_QUOTA=100
 
 curl -s http://127.0.0.1:8080/v1/instances
 curl -s -X POST http://127.0.0.1:8080/v1/analyze \

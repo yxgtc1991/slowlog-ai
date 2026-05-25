@@ -53,6 +53,7 @@ func main() {
 		ragIndexDir:        rag.IndexDirOr(""),
 		instances:          instReg,
 		auditor:            ops.NewAuditor(strings.TrimSpace(os.Getenv("SLOWLOG_AUDIT_PATH"))),
+		limits:             ops.NewLimitsFromEnv(),
 		requireInstance:    strings.TrimSpace(os.Getenv("SLOWLOG_REQUIRE_INSTANCE_ID")) == "1",
 		adminToken:         strings.TrimSpace(os.Getenv("SLOWLOG_ADMIN_TOKEN")),
 	}
@@ -85,12 +86,17 @@ type server struct {
 	ragIndexDir        string
 	instances          *ops.Registry
 	auditor            *ops.Auditor
+	limits             *ops.Limits
 	requireInstance    bool
 	adminToken         string
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	out := map[string]any{"status": "ok"}
+	if s.limits != nil && s.limits.Enabled() {
+		out["limits"] = s.limits.Status()
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 type analyzeRequest struct {
