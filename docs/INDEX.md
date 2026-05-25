@@ -40,11 +40,14 @@ docs/
 ## 命令速查
 
 ```bash
-make agent-eval          # 回归
+make agent-eval          # Agent 回归
+make rag-test            # RAG 检索 golden
 make agent-run           # V6 + 报告
 make rag-check           # 检索试跑（见 guides/RAG.md）
 make doc-links           # 校验文档链接
 ```
+
+推送 `main` 后 GitHub Actions 会自动跑 `agent-eval` + `rag-test` + `doc-links`（见 `.github/workflows/ci.yml`）。
 
 完整说明见 [agent/ROADMAP.md](agent/ROADMAP.md)。
 

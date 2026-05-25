@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Agent eval (golden, no API)
+        run: make agent-eval
+
+      - name: RAG retrieval golden
+        run: make rag-test
+
+      - name: Validate doc links
+        run: make doc-links

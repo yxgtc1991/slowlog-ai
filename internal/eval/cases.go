@@ -98,6 +98,29 @@ func AllCases() []Case {
 			},
 		},
 		{
+			Name:        "rag_then_finish",
+			SlowLogPath: defaultSlowLogPath,
+			Guide:       false,
+			Executor:    NewStubExecutor(),
+			Script: []string{
+				decisionJSON("先查知识库", retrieveRAG("price 最左前缀 filesort Rows_sent")),
+				decisionJSON("无库可连，基于 RAG+慢日志", finish(
+					"根因：复合索引左前缀未满足，WHERE 仅 price；ORDER BY 可能 filesort。建议 (price, created_at) 索引。",
+				)),
+			},
+			Expect: Expect{
+				Trajectory: []TrajectoryStep{
+					{Type: string(promptv6.ActionRetrieveRAG)},
+					{Type: string(promptv6.ActionFinish)},
+				},
+				FinalContains:  []string{"左前缀", "price"},
+				MinIterations:  2,
+				MaxIterations:  2,
+				NoActionErrors: true,
+				FinalPhase:     "finished",
+			},
+		},
+		{
 			Name:        "tool_error_then_finish",
 			SlowLogPath: defaultSlowLogPath,
 			Guide:       false,

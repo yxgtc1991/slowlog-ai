@@ -38,6 +38,18 @@ func TestGoldenRetrieval_productsScenario(t *testing.T) {
 			query:       "Query_time Lock_time 锁等待",
 			wantInTitle: "Query_time",
 		},
+		{
+			query:       "Rows_sent Rows_examined 返回行数",
+			wantInTitle: "Rows_sent",
+		},
+		{
+			query:       "Using filesort 排序 Extra",
+			wantInTitle: "filesort",
+		},
+		{
+			query:       "Lock_time 锁竞争 长事务",
+			wantInTitle: "锁竞争",
+		},
 	}
 
 	for _, tc := range cases {

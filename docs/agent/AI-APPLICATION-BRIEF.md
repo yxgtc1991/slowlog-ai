@@ -55,7 +55,7 @@ RAG 解决的是 **领域话术和边界**（例如 rows_examined 高不等于�
 验证分两层：  
 - **检索层**：`make rag-check` / `rag-check-compare`，不跑 LLM，只看 query 命中哪几条 chunk；  
 - **Agent 层**：`make agent-eval` 用 Mock RAG 保证轨迹稳定，真 TF-IDF 在 `make run` / `agent-run` 里用。  
-知识库已按 **products 慢日志场景** 扩到 11 篇 / 30+ chunk（左前缀、ORDER BY+LIMIT、EXPLAIN 等），`make rag-test` 做检索 golden；更大规模可换 embedding / 向量库，接口 `Retriever` 已隔离。
+知识库已按 **products 慢日志场景** 扩到 14 篇 / 35+ chunk（左前缀、filesort、Rows_sent、锁边界等），`make rag-test` 做检索 golden；更大规模可换 embedding / 向量库，接口 `Retriever` 已隔离。
 
 ---
 

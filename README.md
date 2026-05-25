@@ -14,7 +14,7 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 | `make run-v5` | 同上，固定 **V5** Tool Calling | ✓ | 对比协议 |
 | `make agent-run` | V6 全流程 + 写入 `reports/`（brief.html 等） | ✓ | 推荐 |
 | `make agent-run-v5` | V5 Tool Calling + `reports/v5-run-*.json` | ✓ | 对比 |
-| `make agent-eval` | **回归测试**：标准用例检查轨迹与结论，**不调 LLM** | — | — |
+| `make agent-eval` | **Agent 回归**：4 条 golden，**不调 LLM** | — | — |
 | `make rag-check` | RAG 检索试跑（默认 **TF-IDF**，可传查询词） | — | — |
 | `make rag-check-compare` | 并排对比 **tfidf** vs **embedding**（本地向量） | — | — |
 | `make rag-test` | RAG 检索 **golden** + 单元测试 | — | — |

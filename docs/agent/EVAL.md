@@ -10,13 +10,13 @@
 |------|------|
 | `ScriptLLM` | 按脚本顺序返回「假 LLM」JSON，**不消耗 API** |
 | `StubExecutor` | 工具返回固定 JSON，**不连 MySQL** |
-| `internal/eval/cases.go` | 3 条内置 golden：推荐流程、type 误写归一化、工具失败仍 finish |
+| `internal/eval/cases.go` | 4 条内置 golden：guided 全流程、RAG 后 finish、type 归一化、工具失败仍 finish |
 | `AssertReportFile` | 对 `reports/*.json` 做结构/结论断言（真实跑完后的存档） |
 
 ## 为什么做
 
 - **之前**：只有 `v6_action_test` 测解析片段；完整 Agent 只能靠 `make agent-run` 肉眼对比。
-- **现在**：CI / 本地 `make agent-eval` 秒级验证「轨迹对不对、结论有没有关键信息」。
+- **现在**：CI / 本地 `make agent-eval` 秒级验证「轨迹对不对、结论有没有关键信息」；检索另见 `make rag-test`。
 - **解决的问题**：改 `normalizeNextAction`、循环逻辑、报告字段时，**有自动化护栏**，避免回归。
 
 ## 如何运行

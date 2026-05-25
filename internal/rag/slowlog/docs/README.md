@@ -21,6 +21,9 @@
 - `patterns/composite_index_left_prefix.md`
 - `patterns/order_by_with_limit.md`
 - `anti-patterns/filter_missing_leftmost_prefix.md`
+- `anti-patterns/ignore_filesort_in_extra.md`
+- `metrics/rows_sent.md`
+- `boundaries/lock_contention.md`
 - `actions/index_for_products_price_filter.md`
 
 ## 验证

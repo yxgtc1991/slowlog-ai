@@ -66,7 +66,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [EVAL](EVAL.md) |
 | 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
 | 结构化 Trace | `llm.chat` / `tool.*` span + 耗时进 JSON/brief | `trace.go` · `agent-run` 且记录 rounds 时 |
-| 真 RAG | 11 篇知识库 + chunk + TF-IDF / embedding | [guides/RAG.md](../guides/RAG.md) · `make rag-test` |
+| 真 RAG | 14 篇知识库 + chunk + TF-IDF / embedding | [guides/RAG.md](../guides/RAG.md) · `make rag-test` |
 
 ---
 
@@ -149,15 +149,17 @@ internal/analyzer/v6_report*.go
 
 1. V2→V3：confirmed / suspected 与 RAG 边界。  
 2. V4→V5：能力发现 → API `tool_calls`。  
-3. V5→V6：不只调工具，还有 analyze / finish；为何用 NextAction（灵活）以及和 Tool Calling 的 trade-off。  
-4. 难点：`normalizeNextAction`、`FlexString`、报告 MD 与可观测。  
-5. 下一步：Eval、真 RAG、双协议（见上表 P0/P1）。  
+3. V5→V6：不只调工具，还有 analyze / finish；NextAction 与 Tool Calling 的 trade-off（`make run-v5` 可对比）。  
+4. 工程化：**`make agent-eval`**（Agent golden）+ **`make rag-test`**（检索 golden）+ Trace / toolerr。  
+5. 知识库：products 场景、左前缀 / ORDER BY+LIMIT；`make rag-check` 现场演示检索。  
+6. 难点：`normalizeNextAction`、报告 MD 折行、GoLand 看 **PNG / brief.html**。  
 
 ### 可主动提的亮点
 
 - 同一仓库保留 V1–V6，**对比学习**而非黑盒 Demo。  
 - 真实 MySQL + EXPLAIN，索引默认 **dry_run**。  
-- 报告体系：**不必重跑 LLM 即可复盘**。
+- 报告体系：**不必重跑 LLM 即可复盘**。  
+- CI：`agent-eval` + `rag-test` 合并前自动跑（见 `.github/workflows/ci.yml`）。
 
 ---
 
@@ -171,15 +173,16 @@ internal/analyzer/v6_report*.go
 
 **汇报 / 演示前（1 小时）**
 
-1. README 总览表 + V5/V6 对比  
-2. 本页「讲解提纲」+「后续路线 P0」  
-3. 本地再跑一次 `make agent-run`，能口述每轮在干什么  
+1. [AI-APPLICATION-BRIEF](AI-APPLICATION-BRIEF.md) 口述 2 分钟稿  
+2. `make agent-eval` + `make rag-test`（30 秒，证明可回归）  
+3. `make agent-run` → 打开 `reports/*brief.html` 指 3 轮  
+4. 可选：`make rag-check "price 最左前缀"`、`make run-v5` 对比协议  
 
 **动手改 Agent 时**
 
 1. `v6_agent.go` / `v6_action.go`  
 2. `internal/mcp/` 新工具注册方式见 ARCHITECTURE  
-3. 改完跑 `make agent-eval` 与 `go test ./internal/...`；大改 Prompt 再 `make agent-run`  
+3. 改完跑 `make agent-eval`、`make rag-test`；大改 Prompt 再 `make agent-run`  
 
 ---
 
@@ -191,7 +194,8 @@ internal/analyzer/v6_report*.go
 
 | 日期 | Commit | 说明 |
 |------|--------|------|
-| （待提交） | — | **V5/V6 并列**：`SLOWLOG_AGENT_MODE` + `make run-v5` / `agent-run-v5` |
+| 2026-05-25 | `1ab991d` | **工业级 RAG**：11 篇知识库 + `golden_retrieval_test` + `make rag-test`；docs 分目录 |
+| 2026-05-25 | `d189eab` | **V5/V6 并列**：`SLOWLOG_AGENT_MODE` + `make run-v5` / `agent-run-v5` |
 | 2026-05-25 | `1d75e28` | **真 RAG**：TF-IDF + `slowlog/docs` embed |
 | 2026-05-25 | `a73aae8` | **RAG chunk/向量**：按 `##` 切分 + embedding 内存 TopK |
 | 2026-05-25 | `fecce6e` | **结构化 Trace**：`trace.spans`（`llm.chat` / `tool.*` + `duration_ms`）；brief/HTML 逐轮「耗时」列 |
