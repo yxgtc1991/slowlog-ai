@@ -41,13 +41,31 @@ func runOnce(query string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	chunks, err := r.Retrieve(context.Background(), query)
+	ctx := context.Background()
+	slowHint := strings.TrimSpace(os.Getenv("SLOWLOG_RAG_SLOWLOG_FILE"))
+	if slowHint != "" {
+		b, err := os.ReadFile(slowHint)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ctx = rag.ContextWithSlowLog(ctx, string(b))
+	}
+	if mp, ok := r.(*rag.MultiPathRetriever); ok {
+		fmt.Printf("rewrite queries: %v\n", mp.QueriesForDebug(ctx, query))
+	}
+	chunks, err := r.Retrieve(ctx, query)
 	if err != nil {
 		log.Fatal(err)
 	}
 	mode := strings.TrimSpace(os.Getenv("SLOWLOG_RAG"))
 	if mode == "" {
 		mode = "tfidf"
+	}
+	if os.Getenv("SLOWLOG_RAG_MULTI") == "1" {
+		mode += "+multi"
+	}
+	if os.Getenv("SLOWLOG_RAG_DUAL") == "1" {
+		mode += "+dual"
 	}
 	fmt.Printf("mode: %s\nquery: %s\n\n", mode, query)
 	for i, c := range chunks {

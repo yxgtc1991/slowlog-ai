@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	promptv6 "ai_slow_log/internal/prompt/slowlog"
+	"ai_slow_log/internal/rag"
 	"ai_slow_log/internal/toolerr"
 	"context"
 	"fmt"
@@ -158,7 +159,8 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 				fmt.Sprintf("执行工具: %s", decision.NextAction.ToolName))
 
 		case promptv6.ActionRetrieveRAG:
-			chunks, err := a.retriever.Retrieve(ctx, decision.NextAction.RAGQuery)
+			ragCtx := rag.ContextWithSlowLog(ctx, slowLog)
+			chunks, err := a.retriever.Retrieve(ragCtx, decision.NextAction.RAGQuery)
 			if err != nil {
 				actionErr = err
 				roundRec.ActionError = err.Error()

@@ -40,7 +40,7 @@
 | G13 | P3 | RAG 内存索引 | embed + 进程内 TF-IDF | 向量库版本、热更新、按租户隔离 | 已完成 |
 | G14 | P3 | 无多租户与审计 | 单 `.env` 连库 | 实例注册、操作审计、RBAC | 已完成 |
 | G15 | P3 | 无成本与限流 | 每 run 直调 LLM | 配额、并发、超时、熔断 | 已完成 |
-| G16 | P3 | Query 改写 / 多路召回 | 单路 `rag_query` | 规则抽取 + 可选 RRF | 待做 |
+| G16 | P3 | Query 改写 / 多路召回 | 单路 `rag_query` | 规则抽取 + 可选 RRF | 已完成 |
 
 ---
 
@@ -68,7 +68,7 @@
 3. ~~**G13**~~ 磁盘索引 JSON + `make rag-index-build` + `/v1/rag/rebuild`（见 [RAG-INDEX](../design/RAG-INDEX.md)）  
 4. ~~**G14**~~ 实例注册 + JSONL 审计 + admin token（见 [OPS.md](../design/OPS.md)）  
 5. ~~**G15**~~ 进程内限流 / 日配额 / 并发（`internal/ops/limits`）  
-6. **G16** 多路召回按业务需要排期  
+6. ~~**G16**~~ 慢日志规则改写 + 多 query RRF（见 [RAG.md](../guides/RAG.md) G16 节）  
 
 ---
 
@@ -86,6 +86,7 @@
 | 2026-05-25 | G13 完成：RAG 磁盘索引 + rag-index CLI + API rebuild |
 | 2026-05-25 | G14 完成：实例注册、JSONL 审计、admin token（[OPS.md](../design/OPS.md)） |
 | 2026-05-25 | G15 完成：API 限流、日配额、并发（[OPS.md](../design/OPS.md)） |
+| 2026-05-25 | G16 完成：规则 query 改写 + Multi/Dual 路径 RRF |
 
 ---
 
@@ -95,7 +96,8 @@
 make check
 make api-test
 make rag-check "JOIN 驱动表"
+SLOWLOG_RAG_MULTI=1 SLOWLOG_RAG_SLOWLOG_FILE=testdata/slowlog-products.txt make rag-check "优化"
 ls testdata/slowlog-*.txt
 ```
 
-对外交流前对照：**G01～G03 必能口述**；**G04～G06 有样例可演示**；**G11～G15 为 PoC 已实现**；**G16 仍为路线图**。
+对外交流前对照：**G01～G03 必能口述**；**G04～G06 有样例可演示**；**G11～G16 为 PoC 已实现**。

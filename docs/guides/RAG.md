@@ -19,6 +19,16 @@
 
 未设置 `SLOWLOG_RAG` 时等同于 **`tfidf`**。
 
+### G16 多路召回（可选）
+
+| 变量 | 说明 |
+|------|------|
+| `SLOWLOG_RAG_MULTI=1` | 从慢日志规则抽取表名/指标，生成多条 `rag_query` 变体，**RRF** 融合（默认开启，`SLOWLOG_RAG_RRF=0` 关闭） |
+| `SLOWLOG_RAG_DUAL=1` | TF-IDF + embedding 双后端、多 query、RRF（启动会建两套索引） |
+| `SLOWLOG_RAG_SLOWLOG_FILE` | `rag-check` 时注入慢日志路径，演示改写效果 |
+
+V6 `retrieve_rag` 会自动把当前慢日志放入 context，无需额外配置。
+
 ---
 
 ## 2. 命令（不跑 LLM，秒级验证）
