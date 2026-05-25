@@ -1,0 +1,17 @@
+sequenceDiagram
+  participant LLM
+  participant Agent as V6Agent
+  participant RAG as TFIDFRetriever
+  participant KB as slowlog/docs
+  participant State as AgentState
+
+  LLM->>Agent: NextAction retrieve_rag
+  Note over Agent: rag_query from LLM
+  Agent->>RAG: Retrieve(ctx, rag_query)
+  RAG->>KB: 5 Markdown docs embedded
+  Note over RAG,KB: tokenize, TF-IDF, TopK
+  RAG-->>Agent: KnowledgeChunk plus score
+  Agent->>State: RecordRAG
+  Note over State: summary and phase rag_done
+  Agent->>LLM: next round PromptSummary
+  Note over LLM: RAG plus tools then decide next action

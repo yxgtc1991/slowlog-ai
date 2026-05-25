@@ -3,7 +3,7 @@ GOPROXY ?= https://goproxy.cn,direct
 
 export GOPROXY
 
-.PHONY: deps vendor build mysql-check mysql-cap-check doc-links agent-run agent-eval report-md run
+.PHONY: deps vendor build mysql-check mysql-cap-check rag-check doc-diagrams doc-links agent-run agent-eval report-md run
 
 deps:
 	go mod tidy
@@ -20,6 +20,12 @@ mysql-check:
 
 mysql-cap-check:
 	go run ./cmd/mysql-cap-check
+
+rag-check:
+	go run ./cmd/rag-check
+
+doc-diagrams:
+	./scripts/generate-diagrams.sh
 
 doc-links:
 	go run ./scripts/validate-md-links

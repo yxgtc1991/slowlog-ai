@@ -11,6 +11,7 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 | `make run` | 控制台跑 **V6**；默认 `testdata/slowlog-products.txt`（`products` 表） | ✓ | 推荐 |
 | `make agent-run` | 同上慢日志 + 写入 `reports/`（HTML/MD/JSON，可复盘） | ✓ | 推荐 |
 | `make agent-eval` | **回归测试**：标准用例检查轨迹与结论，**不调 LLM** | — | — |
+| `make rag-check` | **TF-IDF 检索** slowlog 知识库（可传查询词） | — | — |
 | `make mysql-check` | 只测 `.env` 里 MySQL 能否连通 | — | ✓ |
 | `make report-md JSON=reports/xxx.json` | 从已有 JSON **重生** MD/HTML，不重跑 Agent | — | — |
 | `make doc-links` | 校验文档内 Markdown 链接与锚点 | — | — |

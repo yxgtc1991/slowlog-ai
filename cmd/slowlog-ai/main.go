@@ -57,7 +57,7 @@ func main() {
 	v4Analyzer := analyzer.NewAnalyzer(
 		llmClient,
 		analyzer.WithPromptBuilder(&prompt.RagV3Prompt{}),
-		analyzer.WithRAGRetriever(analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever())),
+		analyzer.WithRAGRetriever(analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever())),
 	)
 
 	// ===== V4 能力感知演示（已关闭，只保留 V5）=====
@@ -126,7 +126,7 @@ func main() {
 		// 3. 创建 V5 Tool Calling 分析器
 		v5Analyzer := analyzer.NewV5ToolCallingAnalyzer(
 			toolCallingClient,
-			analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever()),
+			analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever()),
 			mcp.NewServerAsExecutor(mcpServer),
 			caps,
 		)
@@ -167,7 +167,7 @@ func main() {
 	}
 	v6Analyzer := analyzer.NewV6AgentAnalyzer(
 		llmClient, // 使用普通 LLM 客户端
-		analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever()),
+		analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever()),
 		mcp.NewServerAsExecutor(mcpServer),
 		caps,
 		v6Opts...,

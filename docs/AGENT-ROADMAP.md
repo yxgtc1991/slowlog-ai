@@ -17,6 +17,7 @@
 | 跑一遍 Agent 并生成报告 | [AGENT-RUN.md](AGENT-RUN.md) |
 | Agent 回归测试（无 API） | [AGENT-EVAL.md](AGENT-EVAL.md) |
 | V6 流程图 | [diagrams/v6-agent-flow.md](diagrams/v6-agent-flow.md) |
+| RAG 真检索 / V3 vs V6 | [diagrams/rag-flow.md](diagrams/rag-flow.md) |
 | 校验文档内链 | `make doc-links` |
 
 ---
@@ -62,6 +63,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [AGENT-EVAL](AGENT-EVAL.md) |
 | 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
 | 结构化 Trace | `llm.chat` / `tool.*` span + 耗时进 JSON/brief | `trace.go` · `agent-run` 且记录 rounds 时 |
+| 真 RAG | TF-IDF TopK 检索 `slowlog/docs` | `make rag-check` · [RAG 流程图](diagrams/rag-flow.md) |
 
 ---
 
@@ -75,7 +77,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | P0 | **类型化 AgentState** + context 摘要进 Prompt | 状态机、控 Token | **已实现** |
 | P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | **已实现** |
 | P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | **已实现** |
-| P1 | **真 RAG**（chunk + 向量/TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | 计划 |
+| P1 | **真 RAG**（chunk + TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | **已实现** |
 | P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | 计划 |
 | P2 | `ask_question` 真人机协同（暂停/恢复） | HITL | 计划 |
 | P2 | Plan-and-Execute（先 plan 再执行） | 对比 ReAct | 计划 |
@@ -98,6 +100,7 @@ make report-md JSON=reports/agent-run-xxx.json
 make mysql-check              # 仅测 MySQL
 make doc-links                # 校验 md 链接
 make agent-eval               # V6 golden 回归（无 API）
+make rag-check                # TF-IDF 检索试跑（无 API）
 
 # 观察每轮决策（stderr）
 SLOWLOG_AGENT_TRACE=1 go run ./cmd/slowlog-ai -agent-trace
@@ -121,7 +124,7 @@ cmd/agent-run/main.go      # 完整体验 + 写 reports/
 internal/analyzer/v6_agent.go
 internal/prompt/slowlog/v6_action.go
 internal/mcp/              # MCP 工具实现
-internal/rag/              # 知识库（当前 MockRetriever）
+internal/rag/              # slowlog/docs + TF-IDF（Mock 仅 eval）
 internal/analyzer/v6_report*.go
 ```
 
@@ -178,13 +181,14 @@ internal/analyzer/v6_report*.go
 
 > 新 **Agent / MCP** commit 合并后补一行：`git log -1 --format='%ad %h %s' --date=short`。纯文档 commit 可不记。
 
-### Agent 工程化（2026-05）
+### Agent 工程化
 
 | 日期 | Commit | 说明 |
 |------|--------|------|
-| （待提交） | — | **结构化 Trace**：`trace.spans` 记录 LLM/工具耗时；brief 表增「耗时」列 |
-| （待提交） | — | **工具错误码**：`toolerr`（`code` / `retryable`）；失败写入 AgentState 摘要与报告 `action_outcome` |
-| 2026-05-22 | `3030261` | **Agent 状态**：`AgentState` 阶段机 + Prompt 摘要；默认 `products` 慢日志；EXPLAIN 自动对齐慢日志 SQL |
+| （待提交） | — | **真 RAG**：`TFIDFRetriever` 检索 `internal/rag/slowlog/docs`；`SLOWLOG_RAG=mock` 回退 Mock |
+| 2026-05-25 | `fecce6e` | **结构化 Trace**：`trace.spans`（`llm.chat` / `tool.*` + `duration_ms`）；brief/HTML 逐轮「耗时」列 |
+| 2026-05-25 | `c6017c2` | **工具错误码**：`toolerr`（`code` / `retryable`）；失败写入 AgentState 摘要与 `action_outcome` |
+| 2026-05-22 | `3030261` | **Agent 状态**：`AgentState` 阶段机 + Prompt 摘要；默认 `products` 慢日志；EXPLAIN 对齐慢日志 SQL |
 | 2026-05-22 | `e3c48ed` | **Agent 回归**：golden 标准用例、`make agent-eval`、轨迹/结论断言 |
 | 2026-05-22 | `97f47c5` | **完整体验**：`agent-run`、报告 JSON/MD/HTML/brief、guided 流程、轨迹与报告修复 |
 

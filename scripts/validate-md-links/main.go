@@ -33,7 +33,8 @@ func main() {
 		if err != nil || info.IsDir() {
 			return nil
 		}
-		if strings.HasSuffix(path, ".md") && !strings.Contains(path, "/vendor/") {
+		if strings.HasSuffix(path, ".md") && !strings.Contains(path, "/vendor/") &&
+			!strings.Contains(path, "/node_modules/") {
 			mdFiles = append(mdFiles, path)
 		}
 		return nil

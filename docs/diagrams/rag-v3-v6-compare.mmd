@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph V3["V3 SlowLogAnalyzer once"]
+    SL3[slow log]
+    R3[Retrieve once at start]
+    P3[Prompt with chunks]
+    L3[LLM JSON result]
+    SL3 --> R3 --> P3 --> L3
+  end
+
+  subgraph V6["V6 Agent loop"]
+    SL6[slow log in every prompt]
+    LOOP{LLM each round}
+    RR[retrieve_rag]
+    CT[call_tool MCP]
+    AN[analyze]
+    FIN[finish]
+    SUM[AgentState summary]
+    LOOP --> RR
+    LOOP --> CT
+    LOOP --> AN
+    LOOP --> FIN
+    RR --> SUM
+    CT --> SUM
+    AN --> SUM
+    SUM --> LOOP
+    SL6 --> LOOP
+  end

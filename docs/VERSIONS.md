@@ -87,7 +87,7 @@ var StrictPromptTemplate = `
 
 #### 🧠 V3 RAG 增强：引入知识库（Retrieval-Augmented Generation）
 
-**设计思路**：通过 RAG（检索增强生成）技术，将专家知识库注入到 Prompt 中，提升分析的准确性和深度。
+**设计思路**：通过 RAG（检索增强生成）技术，将专家知识库注入到 Prompt 中，提升分析的准确性和深度。流程对比见 [diagrams/rag-flow.md](diagrams/rag-flow.md)。
 
 **核心改进**：
 - ✅ **知识检索**：从知识库中检索相关的模式、反模式、指标说明

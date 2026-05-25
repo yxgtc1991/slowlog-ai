@@ -1,0 +1,29 @@
+flowchart LR
+  subgraph KB["Knowledge base"]
+    P[patterns md]
+    A[anti-patterns md]
+    M[metrics md]
+    AC[actions md]
+    B[boundaries md]
+  end
+  subgraph IDX["Build index at startup"]
+    E[go embed load]
+    T[tokenize]
+    TF[TF per doc]
+    IDF[IDF corpus]
+    V[vector TF x IDF]
+  end
+  subgraph Q["Query time"]
+    RQ[rag_query]
+    QT[query vector]
+    DOT[dot product]
+    TOP[TopK chunks]
+  end
+  P --> E
+  A --> E
+  M --> E
+  AC --> E
+  B --> E
+  E --> T --> TF --> IDF --> V
+  RQ --> QT --> DOT
+  V --> DOT --> TOP

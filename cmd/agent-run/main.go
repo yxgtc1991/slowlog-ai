@@ -59,7 +59,7 @@ func main() {
 		Analyzer: analyzer.NewAnalyzer(
 			llmClient,
 			analyzer.WithPromptBuilder(&prompt.RagV3Prompt{}),
-			analyzer.WithRAGRetriever(analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever())),
+			analyzer.WithRAGRetriever(analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever())),
 		),
 	})
 
@@ -91,7 +91,7 @@ func main() {
 	}
 	v6 := analyzer.NewV6AgentAnalyzer(
 		llmClient,
-		analyzer.NewRAGRetrieverAdapter(rag.NewMockRetriever()),
+		analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever()),
 		mcp.NewServerAsExecutor(mcpServer),
 		caps,
 		opts...,
