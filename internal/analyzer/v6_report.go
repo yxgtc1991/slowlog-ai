@@ -24,6 +24,7 @@ type AgentRoundRecord struct {
 	ActionError   string              `json:"action_error,omitempty"`
 	ActionOutcome interface{}         `json:"action_outcome,omitempty"`
 	ContextKeys   []string            `json:"context_keys_after,omitempty"`
+	Trace         []TraceSpan         `json:"trace,omitempty"`
 }
 
 // V6AgentRunReport 一次完整运行的可持久化报告。
@@ -40,6 +41,7 @@ type V6AgentRunReport struct {
 	AvailableTools []string               `json:"available_tools,omitempty"`
 	FinalPhase     string                 `json:"final_phase,omitempty"`
 	AgentState     *AgentState            `json:"agent_state,omitempty"`
+	Trace          *RunTrace              `json:"trace,omitempty"`
 }
 
 // BuildV6RunReport 从 Analyze 结果组装报告（需 Analyze 时开启 round 记录）。
@@ -60,6 +62,7 @@ func BuildV6RunReport(slowLog string, result *V6AgentResult, toolNames []string)
 		AvailableTools: toolNames,
 		FinalPhase:     string(result.FinalPhase),
 		AgentState:     result.State,
+		Trace:          result.Trace,
 	}
 }
 
@@ -115,6 +118,9 @@ func formatV6ReportMarkdown(r *V6AgentRunReport, jsonFile string) string {
 	b.WriteString("完整 LLM 原文见 `" + jsonFile + "`；逐轮速览见同名 `.brief.md`。\n\n")
 	b.WriteString(fmt.Sprintf("- 生成时间：`%s`\n", mdSafeText(r.GeneratedAt)))
 	b.WriteString(fmt.Sprintf("- 迭代轮数：**%d**\n", r.Iterations))
+	if r.Trace != nil && r.Trace.TotalDurationMs > 0 {
+		b.WriteString(fmt.Sprintf("- 总耗时：**%d ms**（见 JSON `trace.spans`）\n", r.Trace.TotalDurationMs))
+	}
 	if len(r.AvailableTools) > 0 {
 		b.WriteString(fmt.Sprintf("- 可用 MCP：`%s`\n", strings.Join(r.AvailableTools, "`, `")))
 	}

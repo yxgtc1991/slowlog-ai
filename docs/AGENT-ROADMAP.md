@@ -61,6 +61,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | LLM 容错 | 工具名误写 `type`、`finish` 的 object `result` | `v6_action.go` · `flex_string.go` |
 | Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [AGENT-EVAL](AGENT-EVAL.md) |
 | 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
+| 结构化 Trace | `llm.chat` / `tool.*` span + 耗时进 JSON/brief | `trace.go` · `agent-run` 且记录 rounds 时 |
 
 ---
 
@@ -73,7 +74,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | P0 | **Agent Eval**（golden case、轨迹/结论断言） | 证明可回归、工程化 | **已实现** → [AGENT-EVAL](AGENT-EVAL.md) |
 | P0 | **类型化 AgentState** + context 摘要进 Prompt | 状态机、控 Token | **已实现** |
 | P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | **已实现** |
-| P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | 计划 |
+| P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | **已实现** |
 | P1 | **真 RAG**（chunk + 向量/TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | 计划 |
 | P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | 计划 |
 | P2 | `ask_question` 真人机协同（暂停/恢复） | HITL | 计划 |
@@ -181,6 +182,7 @@ internal/analyzer/v6_report*.go
 
 | 日期 | Commit | 说明 |
 |------|--------|------|
+| （待提交） | — | **结构化 Trace**：`trace.spans` 记录 LLM/工具耗时；brief 表增「耗时」列 |
 | （待提交） | — | **工具错误码**：`toolerr`（`code` / `retryable`）；失败写入 AgentState 摘要与报告 `action_outcome` |
 | 2026-05-22 | `3030261` | **Agent 状态**：`AgentState` 阶段机 + Prompt 摘要；默认 `products` 慢日志；EXPLAIN 自动对齐慢日志 SQL |
 | 2026-05-22 | `e3c48ed` | **Agent 回归**：golden 标准用例、`make agent-eval`、轨迹/结论断言 |

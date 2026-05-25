@@ -27,16 +27,21 @@ func FormatV6ReportBriefMarkdown(r *V6AgentRunReport) string {
 	var b strings.Builder
 	b.WriteString("# Agent 分析过程一览\n\n")
 	b.WriteString(fmt.Sprintf("- 生成时间：%s\n", r.GeneratedAt))
-	b.WriteString(fmt.Sprintf("- 总轮数：**%d**\n\n", r.Iterations))
+	b.WriteString(fmt.Sprintf("- 总轮数：**%d**\n", r.Iterations))
+	if r.Trace != nil && r.Trace.TotalDurationMs > 0 {
+		b.WriteString(fmt.Sprintf("- 总耗时：**%d ms**\n", r.Trace.TotalDurationMs))
+	}
+	b.WriteString("\n")
 
 	b.WriteString("## 结论摘要\n\n")
 	b.WriteString(mdCodeFence("text", truncate(flattenMarkdownHeadings(escapeMarkdownFences(r.FinalResult)), briefConclusionMax)))
 	b.WriteString("\n## 逐轮一览\n\n")
-	b.WriteString("| 轮次 | 做了什么 | 为什么 | 结果 |\n")
-	b.WriteString("|:--:|----------|--------|------|\n")
+	b.WriteString("| 轮次 | 耗时 | 做了什么 | 为什么 | 结果 |\n")
+	b.WriteString("|:--:|------|----------|--------|------|\n")
 	for _, round := range r.Rounds {
-		b.WriteString(fmt.Sprintf("| %d | %s | %s | %s |\n",
+		b.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n",
 			round.Round,
+			mdTableCell(briefRoundTiming(&round)),
 			mdTableCell(briefWhatDid(&round)),
 			mdTableCell(briefWhy(&round)),
 			mdTableCell(briefOutcomeLine(&round)),
@@ -58,6 +63,9 @@ func formatBriefRoundSection(round *AgentRoundRecord) string {
 	}
 	b.WriteString(fmt.Sprintf("- **做了什么**：%s\n", mdSafeText(briefWhatDid(round))))
 	b.WriteString(fmt.Sprintf("- **为什么**：%s\n", mdSafeText(briefWhy(round))))
+	if timing := FormatRoundTiming(round.Trace); timing != "—" {
+		b.WriteString(fmt.Sprintf("- **耗时**：%s\n", mdSafeText(timing)))
+	}
 	if round.ActionError != "" {
 		b.WriteString(fmt.Sprintf("- **错误**：%s\n", mdSafeText(round.ActionError)))
 	} else {
@@ -81,6 +89,13 @@ func briefActionTitle(na *promptv6.NextAction) string {
 	default:
 		return string(na.Type)
 	}
+}
+
+func briefRoundTiming(round *AgentRoundRecord) string {
+	if d := RoundDurationMs(round.Trace); d > 0 {
+		return fmt.Sprintf("%dms", d)
+	}
+	return "—"
 }
 
 func briefWhatDid(round *AgentRoundRecord) string {
@@ -231,13 +246,19 @@ td:first-child { text-align: center; white-space: nowrap; width: 3rem; }
 .tag { display: inline-block; background: #2b6cb022; color: #2b6cb0; padding: 0.1em 0.5em; border-radius: 4px; font-size: 0.85rem; }
 </style></head><body>`)
 	b.WriteString("<h1>Agent 分析过程一览</h1>\n")
-	b.WriteString(fmt.Sprintf("<p class=\"meta\">生成时间：%s · 共 %d 轮</p>\n", html.EscapeString(r.GeneratedAt), r.Iterations))
+	meta := fmt.Sprintf("生成时间：%s · 共 %d 轮", html.EscapeString(r.GeneratedAt), r.Iterations)
+	if r.Trace != nil && r.Trace.TotalDurationMs > 0 {
+		meta += fmt.Sprintf(" · 总耗时 %d ms", r.Trace.TotalDurationMs)
+	}
+	b.WriteString("<p class=\"meta\">" + meta + "</p>\n")
 	b.WriteString("<h2>结论摘要</h2>\n<div class=\"conclusion\">")
 	b.WriteString(html.EscapeString(truncate(r.FinalResult, briefConclusionMax)))
-	b.WriteString("</div>\n<h2>逐轮一览</h2>\n<table><thead><tr><th>轮次</th><th>做了什么</th><th>为什么</th><th>结果</th></tr></thead><tbody>\n")
+	b.WriteString("</div>\n<h2>逐轮一览</h2>\n<table><thead><tr><th>轮次</th><th>耗时</th><th>做了什么</th><th>为什么</th><th>结果</th></tr></thead><tbody>\n")
 	for _, round := range r.Rounds {
 		b.WriteString("<tr><td>")
 		b.WriteString(fmt.Sprintf("%d", round.Round))
+		b.WriteString("</td><td>")
+		b.WriteString(html.EscapeString(briefRoundTiming(&round)))
 		b.WriteString("</td><td>")
 		b.WriteString(html.EscapeString(briefWhatDid(&round)))
 		b.WriteString("</td><td>")
@@ -261,6 +282,10 @@ td:first-child { text-align: center; white-space: nowrap; width: 3rem; }
 		b.WriteString(html.EscapeString(briefWhatDid(&round)))
 		b.WriteString("</li><li><strong>为什么</strong>：")
 		b.WriteString(html.EscapeString(briefWhy(&round)))
+		if timing := FormatRoundTiming(round.Trace); timing != "—" {
+			b.WriteString("</li><li><strong>耗时</strong>：")
+			b.WriteString(html.EscapeString(timing))
+		}
 		b.WriteString("</li><li><strong>结果</strong>：")
 		if round.ActionError != "" {
 			b.WriteString(html.EscapeString("失败：" + round.ActionError))

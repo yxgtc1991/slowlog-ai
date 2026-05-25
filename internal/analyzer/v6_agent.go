@@ -5,6 +5,7 @@ import (
 	"ai_slow_log/internal/toolerr"
 	"context"
 	"fmt"
+	"time"
 )
 
 // V6AgentAnalyzer V6 版本的 Agent 分析器
@@ -34,6 +35,7 @@ type V6AgentResult struct {
 	ConversationHistory []string
 	FinalPhase          AgentPhase
 	State               *AgentState
+	Trace               *RunTrace
 }
 
 // RAGResult RAG 检索结果
@@ -79,6 +81,11 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 	toolResults := make(map[string]interface{})
 	ragResults := make([]RAGResult, 0)
 	var finalResult string
+	runStarted := time.Now()
+	var runTrace *RunTrace
+	if a.recordRounds {
+		runTrace = NewRunTrace()
+	}
 
 	for a.currentIteration < a.maxIterations {
 		a.currentIteration++
@@ -92,12 +99,16 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			a.extraGuide,
 		)
 
+		endLLM := runTrace.Begin("llm.chat", a.currentIteration, nil)
 		llmOutput, err := a.llm.Chat(ctx, prompt)
+		endLLM(err)
 		if err != nil {
 			return nil, fmt.Errorf("failed to call LLM: %w", err)
 		}
 
+		endParse := runTrace.Begin("llm.parse", a.currentIteration, nil)
 		decision, err := promptv6.ParseAgentDecision(llmOutput)
+		endParse(err)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse agent decision: %w", err)
 		}
@@ -117,6 +128,8 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			fmt.Sprintf("决策 %d: %s - %s", a.currentIteration, decision.NextAction.Type, decision.NextAction.Reasoning))
 
 		var lastRAG *RAGResult
+		var actionErr error
+		endAction := runTrace.Begin(actionSpanName(decision.NextAction), a.currentIteration, actionTraceAttrs(decision.NextAction))
 		switch decision.NextAction.Type {
 		case promptv6.ActionCallTool:
 			toolArgs := decision.NextAction.ToolArgs
@@ -129,6 +142,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 				toolArgs,
 			)
 			if err != nil {
+				actionErr = err
 				te := toolerr.From(decision.NextAction.ToolName, err)
 				roundRec.ActionError = te.Message
 				roundRec.ActionOutcome = te.ToMap()
@@ -144,6 +158,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 		case promptv6.ActionRetrieveRAG:
 			chunks, err := a.retriever.Retrieve(ctx, decision.NextAction.RAGQuery)
 			if err != nil {
+				actionErr = err
 				roundRec.ActionError = err.Error()
 				a.state.RecordRAG(decision.NextAction.RAGQuery, nil, err)
 				a.conversationHistory = append(a.conversationHistory,
@@ -187,12 +202,17 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 			a.conversationHistory = append(a.conversationHistory,
 				fmt.Sprintf("完成: %s", finalResult))
 		}
+		endAction(actionErr)
 
 		a.traceAfterAction(decision.NextAction, toolResults, lastRAG)
+		if a.verbose && runTrace != nil {
+			a.tracef("  ⏱ 本轮耗时: %s\n", FormatRoundTiming(runTrace.SpansForRound(a.currentIteration)))
+		}
 
 		if a.recordRounds {
 			roundRec.AgentPhase = string(a.state.Phase)
 			roundRec.ContextKeys = a.state.contextKeys()
+			roundRec.Trace = runTrace.SpansForRound(a.currentIteration)
 			rounds = append(rounds, roundRec)
 		}
 
@@ -212,6 +232,10 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 		}
 	}
 
+	if runTrace != nil {
+		runTrace.Finish(runStarted)
+	}
+
 	return &V6AgentResult{
 		FinalResult:         finalResult,
 		Actions:             allActions,
@@ -222,6 +246,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 		ConversationHistory: a.conversationHistory,
 		FinalPhase:          a.state.Phase,
 		State:               a.state,
+		Trace:               runTrace,
 	}, nil
 }
 

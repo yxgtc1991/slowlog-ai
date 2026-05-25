@@ -58,6 +58,14 @@ func assertResult(result *analyzer.V6AgentResult, exp Expect) []string {
 		}
 	}
 
+	if exp.MinSpansPerRound > 0 {
+		for _, r := range result.Rounds {
+			if len(r.Trace) < exp.MinSpansPerRound {
+				errs = append(errs, fmt.Sprintf("round %d trace_spans=%d want >= %d", r.Round, len(r.Trace), exp.MinSpansPerRound))
+			}
+		}
+	}
+
 	for tool, want := range exp.ToolFailures {
 		if result.State == nil {
 			errs = append(errs, "agent state is nil")

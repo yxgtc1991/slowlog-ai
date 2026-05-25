@@ -37,7 +37,7 @@ func TestFormatV6ReportBriefMarkdown_table(t *testing.T) {
 			},
 		},
 	})
-	if !strings.Contains(md, "| 轮次 | 做了什么 | 为什么 | 结果 |") {
+	if !strings.Contains(md, "| 轮次 | 耗时 | 做了什么 | 为什么 | 结果 |") {
 		t.Fatal("want summary table")
 	}
 	if !strings.Contains(md, "检索知识库") {

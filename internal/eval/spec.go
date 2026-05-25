@@ -17,6 +17,7 @@ type Expect struct {
 	NoActionErrors   bool                         // 每轮 ActionError 为空
 	FinalPhase       string                       // 期望终态，如 finished
 	ToolFailures     map[string]ToolFailureExpect // 工具名 -> 失败码断言
+	MinSpansPerRound int                          // 每轮 trace span 数（需 WithAgentRecordRounds）
 }
 
 // ToolFailureExpect 工具失败时的错误码期望。

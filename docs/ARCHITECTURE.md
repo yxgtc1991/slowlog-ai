@@ -108,6 +108,8 @@ analyzer := analyzer.NewAnalyzer(
 
 **工具错误码**（`internal/toolerr`）：MCP 失败经 `toolerr.From` 映射为 `code`（如 `mysql_table_not_found`）与 `retryable`；Agent 摘要中标注「可重试 / 勿重试」，报告 `action_outcome` 含 `{ok:false, code, message, retryable}`。
 
+**结构化 Trace**（`internal/analyzer/trace.go`）：`make agent-run`（开启 round 记录）时写入 `trace.total_duration_ms` 与每轮 `rounds[].trace[]`（`llm.chat`、`llm.parse`、`tool.*` 等 span 及 `duration_ms`）；`*.brief.html` 逐轮表含耗时列。
+
 ### v1-v3-example
 
 **V1–V3 集成示例**（V3 + RAG）：
