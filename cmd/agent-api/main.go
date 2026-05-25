@@ -57,9 +57,14 @@ func main() {
 		requireInstance:    strings.TrimSpace(os.Getenv("SLOWLOG_REQUIRE_INSTANCE_ID")) == "1",
 		adminToken:         strings.TrimSpace(os.Getenv("SLOWLOG_ADMIN_TOKEN")),
 		apiKey:             strings.TrimSpace(os.Getenv("SLOWLOG_API_KEY")),
+		metrics:            ops.NewAPIMetrics(),
+	}
+	if srv.limits != nil {
+		srv.limits.OnRateLimited = srv.metrics.IncRateLimit
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /metrics", srv.handleMetrics)
 	mux.HandleFunc("GET /v1/health", srv.handleHealth)
 	mux.HandleFunc("GET /v1/instances", srv.handleListInstances)
 	mux.HandleFunc("POST /v1/analyze", srv.handleAnalyze)
@@ -91,6 +96,7 @@ type server struct {
 	requireInstance    bool
 	adminToken         string
 	apiKey             string
+	metrics            *ops.APIMetrics
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -142,6 +148,7 @@ func (s *server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 
 	s.audit("analyze", "started", inst.ID, "", "", r)
 
+	start := time.Now()
 	ctx, cancel := context.WithTimeout(r.Context(), s.timeout)
 	defer cancel()
 
@@ -154,11 +161,17 @@ func (s *server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		Meta:           s.runMeta(r, inst.ID),
 	})
 	if err != nil {
+		if s.metrics != nil {
+			s.metrics.ObserveAnalyze(time.Since(start).Nanoseconds(), false)
+		}
 		s.audit("analyze", "failed", inst.ID, "", err.Error(), r)
 		writeErr(w, http.StatusInternalServerError, err)
 		return
 	}
 
+	if s.metrics != nil {
+		s.metrics.ObserveAnalyze(time.Since(start).Nanoseconds(), true)
+	}
 	s.audit("analyze", "ok", inst.ID, result.ReportID, "", r)
 	writeJSON(w, http.StatusOK, analyzeResponse{
 		ReportID:    result.ReportID,

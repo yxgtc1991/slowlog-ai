@@ -27,6 +27,7 @@ type Limits struct {
 	dailyCount      int
 	maxConcurrent   int
 	sem             chan struct{}
+	OnRateLimited   func()
 }
 
 // NewLimitsFromEnv 解析环境变量。
@@ -148,6 +149,9 @@ func (l *Limits) Middleware(next http.Handler) http.Handler {
 			return
 		}
 		if err := l.Acquire(); err != nil {
+			if l.OnRateLimited != nil {
+				l.OnRateLimited()
+			}
 			status := http.StatusTooManyRequests
 			if errors.Is(err, ErrTooManyConcurrent) {
 				status = http.StatusServiceUnavailable

@@ -176,6 +176,24 @@ func TestAPIKey_healthPublic(t *testing.T) {
 	}
 }
 
+func TestMetrics_prometheus(t *testing.T) {
+	t.Parallel()
+	s := testServer(t)
+	s.apiKey = "k"
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /metrics", s.handleMetrics)
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	req.Header.Set("X-API-Key", "k")
+	rec := httptest.NewRecorder()
+	s.wrap(mux).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d", rec.Code)
+	}
+	if !bytes.Contains(rec.Body.Bytes(), []byte("slowlog_http_requests_total")) {
+		t.Fatalf("body=%s", rec.Body.Bytes())
+	}
+}
+
 func TestAnalyzeResponse_shape(t *testing.T) {
 	t.Parallel()
 	var resp analyzeResponse
