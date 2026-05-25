@@ -6,6 +6,15 @@ import (
 
 const defaultSlowLogPath = "testdata/slowlog-products.txt"
 
+// CaseNames 返回内置 golden 名称（供 CLI -list）。
+func CaseNames() []string {
+	names := make([]string, len(AllCases()))
+	for i, c := range AllCases() {
+		names[i] = c.Name
+	}
+	return names
+}
+
 // AllCases 内置 golden cases（脚本化 LLM，无 API 费用）。
 func AllCases() []Case {
 	executor := NewStubExecutor().
@@ -141,6 +150,29 @@ func AllCases() []Case {
 					"connect_mysql_instance": {Code: "mysql_connection", Retryable: true},
 				},
 				NoActionErrors: false,
+			},
+		},
+		{
+			Name:        "analyze_then_finish",
+			SlowLogPath: defaultSlowLogPath,
+			Guide:       false,
+			Executor:    NewStubExecutor(),
+			Script: []string{
+				decisionJSON("综合慢日志", analyze("Rows_examined 高、Rows_sent 小，怀疑 price 过滤未走合适索引")),
+				decisionJSON("无 EXPLAIN 仍可结论", finish(
+					"基于慢日志：products 对 price 过滤扫描行数过大；建议 (price, created_at) 复合索引并验证 EXPLAIN。",
+				)),
+			},
+			Expect: Expect{
+				Trajectory: []TrajectoryStep{
+					{Type: string(promptv6.ActionAnalyze)},
+					{Type: string(promptv6.ActionFinish)},
+				},
+				FinalContains:  []string{"price", "索引"},
+				MinIterations:  2,
+				MaxIterations:  2,
+				NoActionErrors: true,
+				FinalPhase:     "finished",
 			},
 		},
 	}

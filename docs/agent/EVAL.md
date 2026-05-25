@@ -10,7 +10,7 @@
 |------|------|
 | `ScriptLLM` | 按脚本顺序返回「假 LLM」JSON，**不消耗 API** |
 | `StubExecutor` | 工具返回固定 JSON，**不连 MySQL** |
-| `internal/eval/cases.go` | 4 条内置 golden：guided 全流程、RAG 后 finish、type 归一化、工具失败仍 finish |
+| `internal/eval/cases.go` | 5 条内置 golden（见下表） |
 | `AssertReportFile` | 对 `reports/*.json` 做结构/结论断言（真实跑完后的存档） |
 
 ## 为什么做
@@ -39,13 +39,13 @@ go run ./cmd/agent-eval -report=reports/agent-run-YYYYMMDD-HHMMSS.json
 
 | 方式 | 何时用 | 对比什么 |
 |------|--------|----------|
-| **`make agent-eval`** | 改代码后每次提交前 | 确定性：轨迹 6 步、工具名、结论含「全表扫描/price/索引」 |
+| **`make agent-eval`** | 改代码后每次提交前 | 确定性：5 条 case 轨迹与结论关键词 |
 | **`make agent-run`** | 改 Prompt / 模型行为后 | 非确定性：看 `*.brief.html` 逐轮是否合理 |
 | **`-report=...json`** | 有一份「满意」的存档后 | 把该 JSON 当基线：改代码后同命令仍应 PASS |
 
 **对比示例**
 
-1. 改 `v6_action.go` 前：`make agent-eval` → 3 passed  
+1. 改 `v6_action.go` 前：`make agent-eval` → 5 passed  
 2. 改坏 `validateNextAction` → `make agent-eval` → FAIL，立刻看到哪一步 type 不对  
 3. 修好后再 `make agent-run`，用 `-report` 确认真实 LLM 报告仍含 `explain_mysql_query` 与 `price`
 
@@ -55,7 +55,15 @@ go run ./cmd/agent-eval -report=reports/agent-run-YYYYMMDD-HHMMSS.json
 |------|--------|
 | `guided_flow` | RAG → 三工具 → analyze → finish；与 guided 推荐流程一致 |
 | `tool_name_as_type` | 模型把 `analyze_slow_log` 写在 `type` 时仍能 `call_tool` 执行 |
+| `rag_then_finish` | 仅 RAG + finish，结论含左前缀 / price |
 | `tool_error_then_finish` | `connect_mysql` 失败仍有 `action_error` 且能 finish |
+| `analyze_then_finish` | 无 MCP 工具，analyze → finish 仍可输出索引建议 |
+
+完整三层说明见 [TESTING.md](TESTING.md)。
+
+```bash
+go run ./cmd/agent-eval -list    # 列出 case 名
+```
 
 ## 扩展
 

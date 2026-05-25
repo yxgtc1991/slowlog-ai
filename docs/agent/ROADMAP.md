@@ -16,11 +16,13 @@
 | V1–V6 设计思路、代码示例 | [design/VERSIONS.md](../design/VERSIONS.md) |
 | 接口、MCP、MySQL、扩展 | [design/ARCHITECTURE.md](../design/ARCHITECTURE.md) |
 | 跑 Agent 并生成报告 | [RUN.md](RUN.md) |
-| Agent 回归（无 API） | [EVAL.md](EVAL.md) |
+| Agent 回归（无 API） | [EVAL.md](EVAL.md) · [TESTING.md](TESTING.md) |
+| 本地开发循环 | [DEVELOP.md](DEVELOP.md) |
 | V6 流程图 | [diagrams/v6-agent-flow.md](../diagrams/v6-agent-flow.md) |
 | RAG 流程 / V3 vs V6 | [diagrams/rag-flow.md](../diagrams/rag-flow.md) |
 | RAG 命令与环境变量 | [guides/RAG.md](../guides/RAG.md) |
 | AI 应用讲解稿 | [AI-APPLICATION-BRIEF.md](AI-APPLICATION-BRIEF.md) |
+| Agent/RAG 调研问答（题单对照） | [RESEARCH-QA.md](RESEARCH-QA.md) |
 | 校验文档内链 | `make doc-links` |
 
 ---
@@ -43,7 +45,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 |------|--------|----------|
 | V1 | 直接问 LLM | `prompt/slowlog/v1_basic.go` |
 | V2 | 结构化 JSON，少编造 | `v2_strict.go` |
-| V3 | RAG 注入（当前检索层 Mock） | `v3_rag.go` · `rag/slowlog/docs/` |
+| V3 | RAG 注入（TF-IDF / embedding，eval 用 mock） | `v3_rag.go` · `rag/slowlog/docs/` |
 | V4 | 能力注册表 / MCP 基础 | `v4_capability.go` · `mcp/*` |
 | V5 | API 级 `tool_calls` | `v5_tool_calling.go` |
 | **V6** | **NextAction 多轮（默认）** | `v6_agent.go` · `v6_action.go` |
@@ -63,10 +65,10 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | 报告存档 | JSON + 完整/精简 MD/HTML | `make agent-run` → [RUN](RUN.md) |
 | 报告重生 | 从 JSON 再生成 MD/HTML | `make report-md JSON=reports/xxx.json` |
 | LLM 容错 | 工具名误写 `type`、`finish` 的 object `result` | `v6_action.go` · `flex_string.go` |
-| Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [EVAL](EVAL.md) |
+| Agent 回归 | 5 条 golden，无 API | `make agent-eval` → [EVAL](EVAL.md) · [TESTING](TESTING.md) |
 | 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
 | 结构化 Trace | `llm.chat` / `tool.*` span + 耗时进 JSON/brief | `trace.go` · `agent-run` 且记录 rounds 时 |
-| 真 RAG | 14 篇知识库 + chunk + TF-IDF / embedding | [guides/RAG.md](../guides/RAG.md) · `make rag-test` |
+| 真 RAG | 16 篇知识库 + chunk + TF-IDF / embedding | [guides/RAG.md](../guides/RAG.md) · `make rag-test` |
 
 ---
 
@@ -104,6 +106,8 @@ make agent-run-v5             # V5 + v5-run 报告
 make report-md JSON=reports/agent-run-xxx.json
 make mysql-check              # 仅测 MySQL
 make doc-links                # 校验 md 链接
+make check                    # test + agent-eval + rag-test + doc-links
+make test                     # internal 包级单测
 make agent-eval               # V6 golden 回归（无 API）
 make rag-check                # RAG 试跑（见 RAG.md）
 make rag-check-compare        # tfidf vs embedding
@@ -130,7 +134,7 @@ cmd/agent-run/main.go      # 完整体验 + 写 reports/
 internal/analyzer/v6_agent.go
 internal/prompt/slowlog/v6_action.go
 internal/mcp/              # MCP 工具实现
-internal/rag/              # slowlog/docs + TF-IDF（Mock 仅 eval）
+internal/rag/              # slowlog/docs + TF-IDF（eval 时 SLOWLOG_RAG=mock）
 internal/analyzer/v6_report*.go
 ```
 
@@ -159,7 +163,7 @@ internal/analyzer/v6_report*.go
 - 同一仓库保留 V1–V6，**对比学习**而非黑盒 Demo。  
 - 真实 MySQL + EXPLAIN，索引默认 **dry_run**。  
 - 报告体系：**不必重跑 LLM 即可复盘**。  
-- CI：`agent-eval` + `rag-test` 合并前自动跑（见 `.github/workflows/ci.yml`）。
+- CI：`test` + `agent-eval` + `rag-test` + `doc-links`（见 `.github/workflows/ci.yml`）；本地等价 `make check`。
 
 ---
 
@@ -194,7 +198,9 @@ internal/analyzer/v6_report*.go
 
 | 日期 | Commit | 说明 |
 |------|--------|------|
-| 2026-05-25 | `1ab991d` | **工业级 RAG**：11 篇知识库 + `golden_retrieval_test` + `make rag-test`；docs 分目录 |
+| 2026-05-21 | （待提交） | **封存加厚**：`make check`；5 条 Agent eval；知识库 +2；TESTING/DEVELOP；CI + `make test` |
+| 2026-05-25 | `980cf55` | **CI + 回归补强**：GitHub Actions；`rag_then_finish`；知识库 +3；ROADMAP/口述更新 |
+| 2026-05-25 | `1ab991d` | **工业级 RAG**：知识库 + `golden_retrieval_test` + `make rag-test`；docs 分目录 INDEX |
 | 2026-05-25 | `d189eab` | **V5/V6 并列**：`SLOWLOG_AGENT_MODE` + `make run-v5` / `agent-run-v5` |
 | 2026-05-25 | `1d75e28` | **真 RAG**：TF-IDF + `slowlog/docs` embed |
 | 2026-05-25 | `a73aae8` | **RAG chunk/向量**：按 `##` 切分 + embedding 内存 TopK |

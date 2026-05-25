@@ -25,6 +25,8 @@
 - `metrics/rows_sent.md`
 - `boundaries/lock_contention.md`
 - `actions/index_for_products_price_filter.md`
+- `patterns/covering_index_basics.md`
+- `metrics/slowlog_header_fields.md`
 
 ## 验证
 

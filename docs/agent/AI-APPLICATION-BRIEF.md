@@ -15,7 +15,7 @@
 
 第三层是 **RAG**。知识库在 `slowlog/docs`，按章节切块，默认 **TF-IDF TopK**；和 V6 的 `rag_query` 联动，检索结果先进 AgentState 再进后续 Prompt。同一套 `Retriever` 接口也接了内存向量 PoC，后续可换 Embedding API 或向量库，Agent 协议不用改。
 
-工程上我补了 **golden 回归**（`make agent-eval`，不调 LLM API）、**结构化 Trace**（LLM/工具耗时进 JSON 和 brief 报告）、以及 **V5 Tool Calling 与 V6 并列切换**，方便在同一条 MCP 上对比「API tool_calls」和「自描述 NextAction」两种形态。
+工程上我补了 **三层回归**（`make check` = 单测 + `agent-eval` 五条 golden + `rag-test`，不调 LLM API）、**结构化 Trace**（LLM/工具耗时进 JSON 和 brief 报告）、以及 **V5 Tool Calling 与 V6 并列切换**，方便在同一条 MCP 上对比「API tool_calls」和「自描述 NextAction」两种形态。
 
 整体上，这是一个 **领域问题 + Agent 编排 + 可观测 + 可回归** 的 AI 应用样例，而不是 Demo 级的一次性 Prompt。
 
@@ -55,7 +55,7 @@ RAG 解决的是 **领域话术和边界**（例如 rows_examined 高不等于�
 验证分两层：  
 - **检索层**：`make rag-check` / `rag-check-compare`，不跑 LLM，只看 query 命中哪几条 chunk；  
 - **Agent 层**：`make agent-eval` 用 Mock RAG 保证轨迹稳定，真 TF-IDF 在 `make run` / `agent-run` 里用。  
-知识库已按 **products 慢日志场景** 扩到 14 篇 / 35+ chunk（左前缀、filesort、Rows_sent、锁边界等），`make rag-test` 做检索 golden；更大规模可换 embedding / 向量库，接口 `Retriever` 已隔离。
+知识库已按 **products 慢日志场景** 扩到 16 篇 / 40+ chunk（左前缀、filesort、覆盖索引、慢日志头字段、锁边界等），`make rag-test` 做检索 golden；更大规模可换 embedding / 向量库，接口 `Retriever` 已隔离。
 
 ---
 

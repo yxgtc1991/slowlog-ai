@@ -3,7 +3,7 @@ GOPROXY ?= https://goproxy.cn,direct
 
 export GOPROXY
 
-.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare rag-test doc-diagrams doc-links agent-run agent-run-v5 agent-eval report-md run run-v5
+.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare rag-test test check doc-diagrams doc-links agent-run agent-run-v5 agent-eval report-md run run-v5
 
 deps:
 	go mod tidy
@@ -29,6 +29,12 @@ rag-check-compare:
 
 rag-test:
 	go test ./internal/rag/... -count=1
+
+test:
+	go test ./internal/... -count=1
+
+check: test agent-eval rag-test doc-links
+	@echo "check: all green"
 
 doc-diagrams:
 	./scripts/generate-diagrams.sh

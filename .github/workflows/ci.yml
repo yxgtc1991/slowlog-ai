@@ -17,6 +17,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Unit tests (internal)
+        run: make test
+
       - name: Agent eval (golden, no API)
         run: make agent-eval
 

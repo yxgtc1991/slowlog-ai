@@ -3,7 +3,7 @@
 [文档索引](../INDEX.md) · [路线图](../agent/ROADMAP.md)
 
 知识库：`internal/rag/slowlog/docs/**/*.md`（编译时 `embed` 进二进制），索引见 [slowlog/docs/README.md](../../internal/rag/slowlog/docs/README.md)。  
-每篇 Markdown 按 **`##` 二级标题** 切成多个 chunk（工业级库 **14 篇 / 35+ chunk**），再检索 TopK（默认 3）。
+每篇 Markdown 按 **`##` 二级标题** 切成多个 chunk（工业级库 **16 篇 / 40+ chunk**），再检索 TopK（默认 3）。
 
 流程图：[diagrams/rag-flow.md](../diagrams/rag-flow.md)
 

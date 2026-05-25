@@ -13,8 +13,16 @@ import (
 func main() {
 	caseName := flag.String("case", "", "只跑指定 case 名称（如 guided_flow）")
 	reportJSON := flag.String("report", "", "对已保存的 agent-run JSON 做断言（不跑 Agent）")
+	listCases := flag.Bool("list", false, "列出内置 golden 名称后退出")
 	verbose := flag.Bool("v", false, "打印每条 case 的轨迹与结论摘要")
 	flag.Parse()
+
+	if *listCases {
+		for _, n := range eval.CaseNames() {
+			fmt.Println(n)
+		}
+		return
+	}
 
 	if *reportJSON != "" {
 		runReportAssert(*reportJSON, *verbose)

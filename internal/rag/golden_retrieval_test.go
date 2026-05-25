@@ -50,6 +50,14 @@ func TestGoldenRetrieval_productsScenario(t *testing.T) {
 			query:       "Lock_time 锁竞争 长事务",
 			wantInTitle: "锁竞争",
 		},
+		{
+			query:       "覆盖索引 Using index 回表 SELECT star",
+			wantInTitle: "覆盖索引",
+		},
+		{
+			query:       "慢日志 Query_time Rows_examined 头字段",
+			wantInTitle: "头字段",
+		},
 	}
 
 	for _, tc := range cases {
