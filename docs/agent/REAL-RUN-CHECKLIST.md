@@ -24,11 +24,13 @@ go run ./cmd/slowlog-ai testdata/slowlog-join-large.txt
 go run ./cmd/slowlog-ai testdata/slowlog-index-hit.txt
 ```
 
-或统一存档：
+或一次跑齐四条（耗 API Token，约 3～5 分钟/条）：
 
 ```bash
-make agent-run
+make real-run-samples
 ```
+
+单场景存档仍可用 `make agent-run`（默认 products）。
 
 ---
 
@@ -57,6 +59,22 @@ go run ./cmd/agent-eval -report=reports/agent-run-YYYYMMDD-HHMMSS.json
 
 ## 记录
 
-| 日期 | 模型 | 场景 | 问题 | 处理 |
+| 日期 | 模型 | 场景 | 结果 | 报告 |
 |------|------|------|------|------|
-| | | | | |
+| 2026-05-25 | DeepSeek（`.env`） | products（guided） | ✅ 证据+EXPLAIN+dry_run DDL；`-report` 断言 OK | `reports/agent-run-20260525-181138.*` |
+| 2026-05-25 | DeepSeek | lock-wait | ✅ 锁等待分析，未盲目加扫描索引；含证据行 | `reports/agent-run-20260525-181237.*` |
+| 2026-05-25 | DeepSeek | join-large | ✅ JOIN/驱动表/连接键索引建议；表不存在时标明仅慢日志 | `reports/agent-run-20260525-181318.*` |
+| 2026-05-25 | DeepSeek | index-hit | ✅ 明确无需加索引；EXPLAIN range+Using index | `reports/agent-run-20260525-181401.*` |
+
+**G09 结论**：四条场景均通过上表「报告里必看项」；products 可作 `-report` 基线。
+
+复现命令：
+
+```bash
+make mysql-check
+go run ./cmd/agent-run -guided=true testdata/slowlog-products.txt
+go run ./cmd/agent-run -guided=false testdata/slowlog-lock-wait.txt
+go run ./cmd/agent-run -guided=false testdata/slowlog-join-large.txt
+go run ./cmd/agent-run -guided=false testdata/slowlog-index-hit.txt
+go run ./cmd/agent-eval -report=reports/agent-run-20260525-181138.json
+```
