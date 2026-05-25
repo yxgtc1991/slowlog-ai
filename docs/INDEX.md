@@ -6,7 +6,8 @@
 
 > 本文件名为 **INDEX.md**（避免与项目根目录 README.md 重名，GoLand 才不易开错页）。
 
-**项目阶段**：核心实现已封存（Agent + RAG + eval + CI）。对外讲解见 [agent/AI-APPLICATION-BRIEF.md](agent/AI-APPLICATION-BRIEF.md)。
+**项目阶段**：**G01～G16 PoC 已结案**（Agent + RAG + HTTP 雏形 + eval + CI）。  
+工业化距离与后续可做 → [agent/INDUSTRIALIZATION-GAP.md](agent/INDUSTRIALIZATION-GAP.md)。对外讲解 → [AI-APPLICATION-BRIEF](agent/AI-APPLICATION-BRIEF.md)。
 
 ---
 
@@ -36,6 +37,7 @@ docs/
 | 封存后复习清单 | [agent/REVIEW-CHECKLIST.md](agent/REVIEW-CHECKLIST.md) |
 | Agent/RAG 技术调研问答 | [agent/RESEARCH-QA.md](agent/RESEARCH-QA.md) |
 | 生产化缺口与优化路线 | [agent/PRODUCTION-GAPS.md](agent/PRODUCTION-GAPS.md) |
+| **距离工业化 Agent** | [agent/INDUSTRIALIZATION-GAP.md](agent/INDUSTRIALIZATION-GAP.md) |
 | 真实 LLM 抽检清单 | [agent/REAL-RUN-CHECKLIST.md](agent/REAL-RUN-CHECKLIST.md) |
 | 日志接入设计（P3 草案） | [design/LOG-INGESTION.md](design/LOG-INGESTION.md) |
 | HTTP API（agent-api） | [design/API.md](design/API.md) |
@@ -51,7 +53,7 @@ docs/
 
 ```bash
 make check               # test + agent-eval + rag-test + doc-links（合并前推荐）
-make agent-eval          # Agent 回归（5 条 golden）
+make agent-eval          # Agent 回归（6 条 golden）
 make rag-test            # RAG 检索 golden
 make agent-run           # V6 + 报告
 make rag-check           # 检索试跑（见 guides/RAG.md）

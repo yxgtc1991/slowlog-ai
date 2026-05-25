@@ -1,10 +1,10 @@
 # 生产化缺口与优化路线
 
-[文档索引](../INDEX.md) · [调研问答](RESEARCH-QA.md) · [测试指南](TESTING.md) · [路线图](ROADMAP.md)
+[文档索引](../INDEX.md) · [工业化距离](INDUSTRIALIZATION-GAP.md) · [调研问答](RESEARCH-QA.md) · [测试指南](TESTING.md) · [路线图](ROADMAP.md)
 
-> **定位**：slowlog-ai 当前是 **工程化 PoC**（CLI + Agent + RAG + MCP + 回归）。本文列出相对「全量生产上线」的缺口，按 **优先级 + 状态** 跟踪；逐项消化，避免对外表述与实现脱节。
+> **定位**：slowlog-ai 当前是 **工程化 PoC**（CLI + Agent + RAG + MCP + 回归）。本文 **G01～G16 已全部完成**；相对「全量生产上线」的后续项见 [工业化距离](INDUSTRIALIZATION-GAP.md)。
 
-**推荐对外说法**：具备上线演进基础的慢 SQL Agent 诊断原型 — 采集与审批接入待建设。
+**推荐对外说法**：具备工业化演进基础的慢 SQL Agent 诊断原型 — 采集与审批接入待建设。
 
 ---
 
@@ -53,22 +53,26 @@
 3. **G06** 检索 golden +5  
 4. `make check` 通过  
 
-### 阶段 B — P2 质量（改 Agent 行为，仍 CLI）← 当前
+### 阶段 B — P2 质量 ✅
 
 1. ~~**G07**~~ Prompt 已要求 finish 含「证据：」  
 2. ~~**G08**~~ `ToolsForPhase` 过滤 Prompt 内工具列表  
-3. ~~**G09**~~ 2026-05-25 四条慢日志真实跑通，见 [REAL-RUN-CHECKLIST](REAL-RUN-CHECKLIST.md)  
+3. ~~**G09**~~ 四条慢日志真实跑通，见 [REAL-RUN-CHECKLIST](REAL-RUN-CHECKLIST.md)  
 4. ~~**G10**~~ `SLOWLOG_AGENT_HITL=1` 时 ask_question 读 stdin；eval `ask_question_hitl`  
 5. ~~**G11**~~ `cmd/agent-api`：`POST /v1/analyze`、GET 报告（见 [API.md](../design/API.md)）  
 
-### 阶段 C — P3 生产形态（新模块或新仓库）← 当前
+### 阶段 C — P3 生产形态（PoC）✅
 
-1. ~~**G11**~~ 最小 HTTP 已实现；生产需鉴权、异步队列  
+1. ~~**G11**~~ 最小 HTTP；进一步鉴权/队列见 [工业化距离](INDUSTRIALIZATION-GAP.md)  
 2. ~~**G12**~~ `POST /v1/ingest` + Job 轮询 + [LOG-INGESTION](../design/LOG-INGESTION.md)  
-3. ~~**G13**~~ 磁盘索引 JSON + `make rag-index-build` + `/v1/rag/rebuild`（见 [RAG-INDEX](../design/RAG-INDEX.md)）  
-4. ~~**G14**~~ 实例注册 + JSONL 审计 + admin token（见 [OPS.md](../design/OPS.md)）  
-5. ~~**G15**~~ 进程内限流 / 日配额 / 并发（`internal/ops/limits`）  
-6. ~~**G16**~~ 慢日志规则改写 + 多 query RRF（见 [RAG.md](../guides/RAG.md) G16 节）  
+3. ~~**G13**~~ 磁盘索引 + `make rag-index-build` + `/v1/rag/rebuild`（[RAG-INDEX](../design/RAG-INDEX.md)）  
+4. ~~**G14**~~ 实例注册 + JSONL 审计 + admin token（[OPS.md](../design/OPS.md)）  
+5. ~~**G15**~~ 进程内限流 / 日配额 / 并发  
+6. ~~**G16**~~ 慢日志规则改写 + 多 query RRF（[RAG.md](../guides/RAG.md)）  
+
+### 阶段 D — 工业化（未立项，建议新里程碑）
+
+见 **[INDUSTRIALIZATION-GAP.md](INDUSTRIALIZATION-GAP.md)**：鉴权、队列、可观测、向量库运维、Reflection/Plan、合规与计费等。  
 
 ---
 
@@ -100,4 +104,4 @@ SLOWLOG_RAG_MULTI=1 SLOWLOG_RAG_SLOWLOG_FILE=testdata/slowlog-products.txt make 
 ls testdata/slowlog-*.txt
 ```
 
-对外交流前对照：**G01～G03 必能口述**；**G04～G06 有样例可演示**；**G11～G16 为 PoC 已实现**。
+对外交流前对照：**G01～G03 必能口述**；**G04～G06 有样例可演示**；**G11～G16 为 PoC 已实现**；**工业化距离**见 [INDUSTRIALIZATION-GAP.md](INDUSTRIALIZATION-GAP.md)。

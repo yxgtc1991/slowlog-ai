@@ -17,8 +17,11 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 | V5 Tool Calling 对比（`SLOWLOG_AGENT_MODE`） | ✅ |
 | 报告 JSON / MD / HTML / brief | ✅ |
 | 结构化 Trace + 工具错误码 | ✅ |
+| HTTP `agent-api` + ingest 异步任务 | ✅ |
+| G14 实例/审计 · G15 限流 · G16 多路 RRF | ✅ |
 
-后续路线图（HITL、Plan-and-Execute、向量库持久化）见 [agent/ROADMAP](docs/agent/ROADMAP.md) P2，**不影响本阶段封存**。
+**G01～G16 已结案**（[PRODUCTION-GAPS](docs/agent/PRODUCTION-GAPS.md)）。  
+距 **工业化 Agent 平台** 还有多远、还能做什么 → [INDUSTRIALIZATION-GAP](docs/agent/INDUSTRIALIZATION-GAP.md)。
 
 **GoLand 里 md 发黑、打不开**：多半是 IDE 缓存。先 **File → Invalidate Caches → Restart**；仍不行看 **`IDE-GOLAND.txt`**。
 
@@ -64,7 +67,8 @@ make run                # 轻量演示
 | [AI 应用讲解稿](docs/agent/AI-APPLICATION-BRIEF.md) | 口述稿与演示脚本 |
 | [复习清单](docs/agent/REVIEW-CHECKLIST.md) | 封存后复习与演示提纲 |
 | [调研问答](docs/agent/RESEARCH-QA.md) | Agent/RAG/基建题单对照与本项目深化建议 |
-| [生产化缺口](docs/agent/PRODUCTION-GAPS.md) | P0～P3 硬伤清单与分步优化 |
+| [生产化缺口](docs/agent/PRODUCTION-GAPS.md) | G01～G16 结案表 |
+| [工业化距离](docs/agent/INDUSTRIALIZATION-GAP.md) | PoC vs 平台化差距与后续主线 |
 | [VERSIONS](docs/design/VERSIONS.md) · [ARCHITECTURE](docs/design/ARCHITECTURE.md) | 版本设计与扩展 |
 
 ---

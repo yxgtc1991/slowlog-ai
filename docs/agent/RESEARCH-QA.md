@@ -14,15 +14,15 @@
 | 调研主题 | 本仓库现状 | 建议深化（仍属 P2，不挡封存演示） |
 |----------|------------|----------------------------------|
 | 上下文维护 / 压缩 | `AgentState.PromptSummary` 截断摘要；`conversationHistory` 仅保留决策短句 | 超长会话时：滑动窗口 + 按 phase 丢弃旧 RAG 标题；可选「摘要轮」单独调 LLM |
-| Query 改写 / 多路召回 | 由模型直接给 `rag_query`，单路 TF-IDF TopK | 增加 HyDE / 多 query 并行检索再融合（RRF） |
+| Query 改写 / 多路召回 | **G16**：慢日志规则抽取 + 多 query + RRF（`SLOWLOG_RAG_MULTI`） | HyDE / LLM 改写；与规则路 A/B eval |
 | 意图识别并行 | 单域（慢 SQL），意图隐含在 NextAction | 多域场景再拆「诊断 / 止血 / 变更」分类器 |
 | Multi-Agent | **单 Agent** 多轮 ReAct 风格 | 拆「检索专员 + DBA 工具专员」需编排层，演示成本高 |
 | Memory 长期记忆 | 仅当次 Run 的 `AgentState` + 报告 JSON | 向量库存历史 case；按 `schema+sql` 去重 |
 | Reflection 自检 | 无单独反思轮 | `finish` 前增加 `reflect` action：核对结论是否含 EXPLAIN 证据 |
-| HITL | `ask_question` 仅写入状态，不阻塞 |  stdin/Webhook 暂停恢复（ROADMAP P2） |
+| HITL | **G10**：`SLOWLOG_AGENT_HITL=1` 时 stdin 阻塞；HTTP 路径仍不等待 | Webhook/工单系统暂停恢复 |
 | RAG 分块 | 按 Markdown `##` 切分（可预期、可回归） | 对比 **递归字符切分** 做离线 eval，不必默认上线 |
 | 向量库 / Milvus | 内存 embedding PoC | 分类检索用 **partition**（单 collection 多 partition）通常更易运维 |
-| Skills 渐进披露 | MCP 工具 Meta 一次性注入 Prompt | 按 phase 只暴露当前阶段工具子集（减 Token、减误调） |
+| Skills 渐进披露 | **G08** `ToolsForPhase` 按阶段过滤工具列表 | 更细粒度 tool schema / 动态技能包 |
 | 幻觉治理 | V2 confirmed/suspected、知识库边界文、RAG | 结论强制引用 `Rows_examined`/EXPLAIN 字段；报告里列 evidence |
 | 代码分析 / 覆盖率 / Mock | **非本仓库范围** | 若岗位偏「代码 Agent」，需另项目；此处只保留 eval 的 `StubExecutor` 作工具 Mock 样例 |
 

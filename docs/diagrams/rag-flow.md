@@ -43,14 +43,27 @@ V6 里 LLM 输出 `retrieve_rag` + `rag_query` 之后，本地检索与注入路
 
 ---
 
-## 4. 和「向量 RAG」的演进关系
+## 4. G16：规则改写 + 多路 RRF（可选）
+
+LLM 给出 `rag_query` 后，V6 将**当前慢日志**放入 context；若 `SLOWLOG_RAG_MULTI=1`：
+
+1. 从慢日志抽取表名、`Rows_examined`、`filesort` 等 → 多条检索 query  
+2. 同后端（或 `SLOWLOG_RAG_DUAL=1` 时 TF-IDF + embedding）分别 TopK  
+3. **RRF** 融合后写入 AgentState  
+
+详见 [guides/RAG.md · G16](../guides/RAG.md)。
+
+---
+
+## 5. 和「向量 RAG」的演进关系
 
 ```text
-已实现                    可演进
+已实现                    可演进（工业化）
 ─────────────────────────────────────────
 按 ## 切 chunk            更长文档按长度二次切分
-TF-IDF（默认）            向量库持久化（Qdrant / sqlite-vec）
-embedding + 内存 TopK     HTTP Embedding（SLOWLOG_EMBEDDING_PROVIDER=http）
+TF-IDF（默认）            Milvus / pgvector + 租户 partition
+embedding + 内存 TopK     HTTP Embedding 常态化
+G16 规则改写 + RRF        HyDE / LLM 改写 A/B
 rag.Retriever 接口        实现不变，替换后端即可
 ```
 
@@ -58,7 +71,7 @@ rag.Retriever 接口        实现不变，替换后端即可
 
 ---
 
-## 5. 怎么用（命令 + 环境变量）
+## 6. 怎么用（命令 + 环境变量）
 
 详见 **[guides/RAG.md](../guides/RAG.md)**。速查：
 

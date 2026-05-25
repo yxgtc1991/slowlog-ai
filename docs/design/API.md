@@ -23,8 +23,23 @@ SLOWLOG_API_ADDR=:8080 go run ./cmd/agent-api
 | `SLOWLOG_WEBHOOK_SECRET` | （空） | 非空时 ingest 需头 `X-Webhook-Secret` |
 | `SLOWLOG_INGEST_MIN_QUERY_TIME` | `0` | 低于该 Query_time（秒）则跳过 |
 | `SLOWLOG_API_PUBLIC_URL` | （空） | 响应中 `report_url` 前缀，如 `http://host:8080` |
+| `SLOWLOG_API_KEY` | （空） | 非空时除 `GET /v1/health` 外需鉴权（见下） |
 
 G14/G15 运维变量见 [OPS.md](OPS.md)。
+
+### 鉴权（D1）
+
+`SLOWLOG_API_KEY` 配置后，除 **`GET /v1/health`** 外所有路由需任选其一：
+
+```http
+Authorization: Bearer <SLOWLOG_API_KEY>
+```
+
+```http
+X-API-Key: <SLOWLOG_API_KEY>
+```
+
+未配置 `SLOWLOG_API_KEY` 时保持 PoC 裸奔（仅建议内网）。
 
 ---
 
@@ -37,6 +52,19 @@ G14/G15 运维变量见 [OPS.md](OPS.md)。
 ```
 
 （`limits` 仅在启用限流时出现。）
+
+### `GET /metrics`（D1 可观测）
+
+Prometheus 文本格式（`text/plain; version=0.0.4`）。需通过上节 API Key（若已配置）。
+
+主要指标：
+
+| 指标 | 说明 |
+|------|------|
+| `slowlog_http_requests_total` | 按 method / route / code 计数 |
+| `slowlog_analyze_total` | analyze 成功/失败次数 |
+| `slowlog_analyze_duration_seconds_sum` | analyze 累计耗时 |
+| `slowlog_rate_limit_rejected_total` | 限流拒绝次数 |
 
 ### `GET /v1/instances`
 
@@ -136,6 +164,6 @@ curl -s -X POST http://127.0.0.1:8080/v1/ingest \
 ## 边界（PoC）
 
 - **同步阻塞**：长慢日志分析可能数分钟，调用方需设客户端超时 ≥ `SLOWLOG_ANALYZE_TIMEOUT`。
-- **无鉴权**：生产需加 API Key / mTLS / 内网隔离。
+- **鉴权 PoC**：`SLOWLOG_API_KEY`（D1）；生产仍需 mTLS / SSO / 内网隔离。
 - **HITL 关闭**：HTTP 路径不等待 stdin；人机协同仍用 CLI。
 - **每请求独立 MCP 连接**：高 QPS 时需连接池（P3）。

@@ -24,6 +24,7 @@
 | AI 应用讲解稿 | [AI-APPLICATION-BRIEF.md](AI-APPLICATION-BRIEF.md) |
 | Agent/RAG 调研问答（题单对照） | [RESEARCH-QA.md](RESEARCH-QA.md) |
 | 生产化缺口与优化路线 | [PRODUCTION-GAPS.md](PRODUCTION-GAPS.md) |
+| **距离工业化 Agent 多远** | [INDUSTRIALIZATION-GAP.md](INDUSTRIALIZATION-GAP.md) |
 | 校验文档内链 | `make doc-links` |
 
 ---
@@ -69,29 +70,32 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | Agent 回归 | 5 条 golden，无 API | `make agent-eval` → [EVAL](EVAL.md) · [TESTING](TESTING.md) |
 | 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
 | 结构化 Trace | `llm.chat` / `tool.*` span + 耗时进 JSON/brief | `trace.go` · `agent-run` 且记录 rounds 时 |
-| 真 RAG | 16 篇知识库 + chunk + TF-IDF / embedding | [guides/RAG.md](../guides/RAG.md) · `make rag-test` |
+| 真 RAG | 21 篇知识库 + chunk + TF-IDF / embedding + G16 多路 RRF | [guides/RAG.md](../guides/RAG.md) · `make rag-test` |
+| HTTP API | analyze / ingest / jobs / 实例 / 审计 / 限流 | [API.md](../design/API.md) · `make agent-api` |
+| HITL（CLI） | `SLOWLOG_AGENT_HITL=1` + eval `ask_question_hitl` | [MODE](MODE.md) · G10 |
+
+**PoC 路线图（G01～G16）已结案** → [PRODUCTION-GAPS](PRODUCTION-GAPS.md)。  
+**距工业化平台还有多远、还能做什么** → [INDUSTRIALIZATION-GAP](INDUSTRIALIZATION-GAP.md)。
 
 ---
 
-## 后续路线（Agent 工程化）
+## 后续路线（工业化，非 G 表）
 
-按 **性价比** 排序；状态随开发更新。
+原 P0/P1 Agent 工程化项 **均已实现**。未做项归入 **阶段 D**，按性价比见下表（详述见 [INDUSTRIALIZATION-GAP](INDUSTRIALIZATION-GAP.md)）。
 
-| 优先级 | 目标 | 价值 | 状态 |
-|:------:|------|------|:----:|
-| P0 | **Agent Eval**（golden case、轨迹/结论断言） | 证明可回归、工程化 | **已实现** → [EVAL](EVAL.md) |
-| P0 | **类型化 AgentState** + context 摘要进 Prompt | 状态机、控 Token | **已实现** |
-| P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | **已实现** |
-| P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | **已实现** |
-| P1 | **真 RAG**（chunk + TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | **已实现** |
-| P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | **已实现** → [MODE](MODE.md) |
-| P2 | `ask_question` 真人机协同（暂停/恢复） | HITL | 计划 |
-| P2 | Plan-and-Execute（先 plan 再执行） | 对比 ReAct | 计划 |
+| 优先级 | 目标 | 状态 |
+|:------:|------|:----:|
+| D1 | API 统一鉴权 + ingest 队列深化 | 待做 |
+| D1 | Prometheus `/metrics` + 告警 | 待做 |
+| D2 | Plan-and-Execute 或 Reflection（二选一） | 待做 |
+| D2 | Milvus / pgvector 替换 JSON 索引 | 待做 |
+| D2 | HyDE / LLM Query 改写（与 G16 规则并存） | 待做 |
+| D3 | 多 Agent 编排、长期 Memory、合规计费 | 远期 |
 
 说明：
 
-- **不必新增 V7**：横切能力挂在「V3 检索层」「V6 Agent 层」即可，演进故事仍用 V1–V6。
-- **建议优先**：先做 P0（Eval + State），RAG 向量 1～2 天 PoC 即可挂在 P1。
+- **不必新增 V7**：横切能力挂在「V3 检索层」「V6 Agent 层」即可。
+- **本仓可封存**：新工业化能力建议 **tag + 分支** 或 **新仓库**，避免 PoC 叙事被生产需求淹没。
 
 ---
 
