@@ -1,14 +1,14 @@
 # 版本演进详解
 
-← [路线图](AGENT-ROADMAP.md) · [README](../README.md) · [架构与扩展](ARCHITECTURE.md)
+[路线图](../agent/ROADMAP.md) · [文档索引](../INDEX.md) · [架构](ARCHITECTURE.md)
 
-日常速查（总览表、如何切换演示）见 [README · 版本演进速查](../README.md#版本演进速查)。
+日常速查（总览表、如何切换演示）见 [README · 版本演进速查](../../README.md#版本演进速查)。
 
 ---
 
 ## 📜 Prompt 演进历程（详解）
 
-> 与 [版本演进速查](../README.md#版本演进速查) 配合阅读：速查表看「优化了什么」，本章看「怎么实现的」。
+> 与 [版本演进速查](../../README.md#版本演进速查) 配合阅读：速查表看「优化了什么」，本章看「怎么实现的」。
 
 本项目展示从基础 Prompt 到能力感知、Tool Calling、Agent 的完整演进；**每一版针对上一版的明确缺陷**，而不是简单堆功能。
 
@@ -87,7 +87,7 @@ var StrictPromptTemplate = `
 
 #### 🧠 V3 RAG 增强：引入知识库（Retrieval-Augmented Generation）
 
-**设计思路**：通过 RAG（检索增强生成）技术，将专家知识库注入到 Prompt 中，提升分析的准确性和深度。流程对比见 [diagrams/rag-flow.md](diagrams/rag-flow.md)。
+**设计思路**：通过 RAG（检索增强生成）技术，将专家知识库注入到 Prompt 中，提升分析的准确性和深度。流程对比见 [diagrams/rag-flow.md](../diagrams/rag-flow.md)。
 
 **核心改进**：
 - ✅ **知识检索**：从知识库中检索相关的模式、反模式、指标说明
@@ -261,7 +261,7 @@ for i, action := range result.Actions {
 
 ### 📊 版本对比总结（简表）
 
-完整列（含关键文件、痛点对照）见 [版本演进速查 · 总览表](../README.md#总览表v1-v6)。
+完整列（含关键文件、痛点对照）见 [版本演进速查 · 总览表](../../README.md#总览表v1-v6)。
 
 | 版本 | 核心思想 | 输出 / 交互 | 扩展性 | 典型场景 |
 |------|---------|-------------|--------|----------|

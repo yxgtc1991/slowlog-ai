@@ -1,8 +1,8 @@
 # RAG 检索流程与 V3 / V6 对比
 
-← [路线图](../AGENT-ROADMAP.md) · [架构 · RAG](../ARCHITECTURE.md) · [VERSIONS · V3/V6](../VERSIONS.md)
+[文档索引](../INDEX.md) · [路线图](../agent/ROADMAP.md) · [架构](../design/ARCHITECTURE.md) · [RAG 用法](../guides/RAG.md)
 
-> 实现：`internal/rag/` · **用法**：[RAG.md](../RAG.md) · 验证：`make rag-check` · 重生成图片：`make doc-diagrams`
+> 实现：`internal/rag/` · 验证：`make rag-check` · 重生成图片：`make doc-diagrams`
 
 ---
 
@@ -60,7 +60,7 @@ rag.Retriever 接口        实现不变，替换后端即可
 
 ## 5. 怎么用（命令 + 环境变量）
 
-详见 **[docs/RAG.md](../RAG.md)**。速查：
+详见 **[guides/RAG.md](../guides/RAG.md)**。速查：
 
 | 目的 | 做法 |
 |------|------|
@@ -83,36 +83,14 @@ SLOWLOG_RAG=mock make agent-eval
 
 ---
 
-## Mermaid 源码（可选，GitHub 可渲染）
+## 图源文件（改图用，GoLand 勿嵌 Mermaid）
 
-改图时编辑 `*.mmd` 后执行 `make doc-diagrams`。
+正文只用 **PNG**（上方图片）。编辑源码后执行 `make doc-diagrams`：
 
-<details>
-<summary>展开 Mermaid 源码</summary>
+| 图 | 源码 |
+|----|------|
+| 时序 | [rag-query-sequence.mmd](./rag-query-sequence.mmd) |
+| 索引 | [rag-tfidf-index.mmd](./rag-tfidf-index.mmd) |
+| V3/V6 | [rag-v3-v6-compare.mmd](./rag-v3-v6-compare.mmd) |
 
-### 时序图 `rag-query-sequence.mmd`
-
-```mermaid
-sequenceDiagram
-  participant LLM
-  participant Agent as V6Agent
-  participant RAG as TFIDFRetriever
-  participant KB as slowlog/docs
-  participant State as AgentState
-  LLM->>Agent: retrieve_rag + rag_query
-  Agent->>RAG: Retrieve
-  RAG->>KB: TF-IDF TopK
-  RAG-->>Agent: chunks + score
-  Agent->>State: RecordRAG
-  Agent->>LLM: next PromptSummary
-```
-
-### 索引图 `rag-tfidf-index.mmd`
-
-见仓库内 [rag-tfidf-index.mmd](./rag-tfidf-index.mmd)。
-
-### 对比图 `rag-v3-v6-compare.mmd`
-
-见仓库内 [rag-v3-v6-compare.mmd](./rag-v3-v6-compare.mmd)。
-
-</details>
+> **GoLand 预览**：打开本页应只看到表格与 PNG；若预览空白，检查是否误开了 `.mmd` 或旧版缓存。

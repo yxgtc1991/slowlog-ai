@@ -1,0 +1,28 @@
+GoLand 里 .md 整页发黑、打不开 — 常见是 IDE 缓存/预览，不是仓库文件坏了。
+（本文件是 .txt，用 GoLand 当普通文本打开即可。）
+
+【优先，很多人说的「刷新一下」就是这个】
+1. 菜单 File → Invalidate Caches…
+2. 勾选 Clear file system cache and Local History（有就勾）
+3. 点 Invalidate and Restart，等重启完
+4. 只打开 docs/INDEX.md（不要和根目录 README.md 混在两个同名标签里）
+
+【仍发黑：先当纯文本看】
+1. 在项目树里右键该 .md → Open in → Text Editor（或 Open With → Text Editor）
+2. 或关掉右侧 Markdown Preview 窗格（只留源码）
+3. Settings → Languages & Frameworks → Markdown → 可先关掉 Split editor and preview
+
+【仍不行】
+1. File → Reload All from Disk
+2. File → Close Project，再重新 Open 本目录
+3. Plugins：若装了 Mermaid / Markdown Navigator 等，先 Disable 再 Restart
+4. macOS 可退出 GoLand 后删缓存（版本号按你本机改）：
+   ~/Library/Caches/JetBrains/GoLand*
+   再启动 GoLand
+
+【看图别依赖 md 预览】
+流程图请直接打开：docs/diagrams/*.png
+报告复盘请打开：reports/*.brief.html
+
+【文档入口】
+docs/INDEX.md（不是 docs/README.md，已与根 README 重名脱钩）

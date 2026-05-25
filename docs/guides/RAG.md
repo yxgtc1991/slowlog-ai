@@ -1,9 +1,11 @@
 # RAG 检索怎么用
 
-知识库：`internal/rag/slowlog/docs/**/*.md`（编译时 `embed` 进二进制）。  
-每篇 Markdown 按 **`##` 二级标题** 切成多个 chunk，再检索 TopK（默认 3）。
+[文档索引](../INDEX.md) · [路线图](../agent/ROADMAP.md)
 
-流程图：[diagrams/rag-flow.md](diagrams/rag-flow.md)
+知识库：`internal/rag/slowlog/docs/**/*.md`（编译时 `embed` 进二进制），索引见 [slowlog/docs/README.md](../../internal/rag/slowlog/docs/README.md)。  
+每篇 Markdown 按 **`##` 二级标题** 切成多个 chunk（工业级库 **30+ chunk**），再检索 TopK（默认 3）。
+
+流程图：[diagrams/rag-flow.md](../diagrams/rag-flow.md)
 
 ---
 
@@ -27,6 +29,9 @@ make rag-check
 
 # 自定义查询（参数即查询词）
 make rag-check "LIMIT ORDER BY filesort 索引"
+
+# 检索 golden + 单元测试（改知识库后必跑）
+make rag-test
 
 # 并排对比 tfidf vs embedding（强制 local 向量，无需 Key）
 make rag-check-compare

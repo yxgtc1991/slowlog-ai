@@ -1,5 +1,7 @@
 # V5 / V6 模式怎么切换
 
+[文档索引](../INDEX.md) · [路线图](ROADMAP.md)
+
 同一套 MCP 能力，两种 **LLM 协议**：
 
 | 模式 | 协议 | 典型能力 |
@@ -21,7 +23,7 @@ SLOWLOG_AGENT_MODE=v6
 SLOWLOG_AGENT_MODE=v5
 ```
 
-与 RAG 独立：`SLOWLOG_RAG` 仍控制 tfidf / embedding / mock（见 [RAG.md](RAG.md)）。
+与 RAG 独立：`SLOWLOG_RAG` 仍控制 tfidf / embedding / mock（见 [guides/RAG.md](../guides/RAG.md)）。
 
 ---
 

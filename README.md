@@ -1,6 +1,8 @@
 # slowlog-ai
 
-MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 同仓保留**，便于对比演进。细节见 [docs/AGENT-ROADMAP.md](docs/AGENT-ROADMAP.md)。
+MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 同仓保留**，便于对比演进。文档入口：[docs/INDEX.md](docs/INDEX.md)。
+
+**GoLand 里 md 发黑、打不开**：多半是 IDE 缓存，不是文件坏了。先 **File → Invalidate Caches → Restart**；仍不行看项目根目录 **`IDE-GOLAND.txt`**（纯文本，一定能打开）。
 
 ---
 
@@ -15,6 +17,7 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 | `make agent-eval` | **回归测试**：标准用例检查轨迹与结论，**不调 LLM** | — | — |
 | `make rag-check` | RAG 检索试跑（默认 **TF-IDF**，可传查询词） | — | — |
 | `make rag-check-compare` | 并排对比 **tfidf** vs **embedding**（本地向量） | — | — |
+| `make rag-test` | RAG 检索 **golden** + 单元测试 | — | — |
 | `make mysql-check` | 只测 `.env` 里 MySQL 能否连通 | — | ✓ |
 | `make report-md JSON=reports/xxx.json` | 从已有 JSON **重生** MD/HTML，不重跑 Agent | — | — |
 | `make doc-links` | 校验文档内 Markdown 链接与锚点 | — | — |
@@ -29,19 +32,20 @@ make run                # 轻量演示
 
 | 文档 | 何时打开 |
 |------|----------|
-| [AGENT-ROADMAP](docs/AGENT-ROADMAP.md) | 总览、后续路线、汇报提纲 |
-| [AGENT-RUN](docs/AGENT-RUN.md) | `agent-run` 报告里有什么、参数说明 |
-| [AGENT-EVAL](docs/AGENT-EVAL.md) | 回归测什么、如何对比 `agent-run` |
-| [VERSIONS](docs/VERSIONS.md) | V1–V6 设计与代码示例 |
-| [ARCHITECTURE](docs/ARCHITECTURE.md) | 接口、MCP、扩展开发 |
-| **[RAG 怎么用](docs/RAG.md)** | **模式、环境变量、命令示例（必读）** |
-| **[V5/V6 切换](docs/AGENT-MODE.md)** | **SLOWLOG_AGENT_MODE、run-v5、agent-run-v5** |
+| **[docs 索引](docs/INDEX.md)** | **全库文档入口（推荐）** |
+| [Agent 路线图](docs/agent/ROADMAP.md) | 总览、路线、命令、汇报提纲 |
+| [agent-run](docs/agent/RUN.md) | 报告字段、参数 |
+| [agent-eval](docs/agent/EVAL.md) | 回归范围 |
+| [RAG](docs/guides/RAG.md) | 模式、环境变量、`rag-check` |
+| [V5/V6 切换](docs/agent/MODE.md) | `SLOWLOG_AGENT_MODE` |
+| [AI 应用讲解稿](docs/agent/AI-APPLICATION-BRIEF.md) | 口述稿与演示脚本 |
+| [VERSIONS](docs/design/VERSIONS.md) · [ARCHITECTURE](docs/design/ARCHITECTURE.md) | 版本设计与扩展 |
 
 ---
 
 ## RAG 检索怎么用（简版）
 
-> 完整说明：[docs/RAG.md](docs/RAG.md)
+> 完整说明：[docs/guides/RAG.md](docs/guides/RAG.md)
 
 | `SLOWLOG_RAG` | 用途 |
 |---------------|------|
@@ -86,7 +90,7 @@ SLOWLOG_RAG=embedding make rag-check        # 试向量（默认 local，不调 
 
 ## 版本演进速查
 
-> 实现细节：[VERSIONS](docs/VERSIONS.md) · V5/V6 区别见下节
+> 实现细节：[VERSIONS](docs/design/VERSIONS.md) · V5/V6 区别见下节
 
 ### 总览表（V1 → V6）
 
@@ -107,7 +111,7 @@ SLOWLOG_RAG=embedding make rag-check        # 试向量（默认 local，不调 
 | 能做 |  mainly 调工具 | 工具 + RAG + 分析 + 提问 + 结束 |
 | 入口 | `main.go` 注释块 | **`make run` 默认** |
 
-切换 V5/V6：`SLOWLOG_AGENT_MODE=v5` 或 `make run-v5`（见 [AGENT-MODE](docs/AGENT-MODE.md)），无需改源码注释。
+切换 V5/V6：`SLOWLOG_AGENT_MODE=v5` 或 `make run-v5`（见 [MODE](docs/agent/MODE.md)），无需改源码注释。
 
 ---
 

@@ -8,8 +8,8 @@ func TestLoadKnowledgeChunks_splitBySection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(chunks) < 10 {
-		t.Fatalf("chunks=%d want >=10 after ## split", len(chunks))
+	if len(chunks) < 28 {
+		t.Fatalf("chunks=%d want >=28 after ## split (industrial knowledge base)", len(chunks))
 	}
 	found := false
 	for _, c := range chunks {

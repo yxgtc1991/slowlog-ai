@@ -1,6 +1,6 @@
 # Agent Eval（P0）
 
-← [路线图](AGENT-ROADMAP.md) · [完整跑通](AGENT-RUN.md)
+[路线图](ROADMAP.md) · [完整跑通](RUN.md) · [文档索引](../INDEX.md)
 
 用 **golden case + 轨迹/结论断言** 证明 V6 Agent 可回归，改 Prompt / 解析 / 执行逻辑后不必每次手跑 `make agent-run`。
 

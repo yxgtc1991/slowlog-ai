@@ -1,8 +1,8 @@
 # Agent 学习与实现路线图
 
-← 建议 **从这里开始查阅** · [README](../README.md) · [版本详解](VERSIONS.md) · [架构与扩展](ARCHITECTURE.md) · [完整跑通](AGENT-RUN.md)
+[文档索引](../INDEX.md) · [项目 README](../../README.md) · [版本详解](../design/VERSIONS.md) · [架构](../design/ARCHITECTURE.md) · [跑通](RUN.md)
 
-> 文档变多、实现变复杂时，用本页做**唯一入口**：先看清「做到哪了、下一步做什么、去哪份文档查细节」。
+> Agent 路线与命令的**正文**在本页；全库文档入口见 [docs/INDEX.md](../INDEX.md)。
 
 ---
 
@@ -10,14 +10,17 @@
 
 | 我想… | 打开 |
 |--------|------|
+| **文档总索引** | [docs/INDEX.md](../INDEX.md) |
 | **总览 + 命令速查** | 本页 |
-| 版本对比表、怎么切换 V4/V5/V6 | [README · 版本演进速查](../README.md#版本演进速查) |
-| V1–V6 设计思路、代码示例、学习要点 | [VERSIONS.md](VERSIONS.md) |
-| 接口、Options、MCP、MySQL、扩展开发 | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| 跑一遍 Agent 并生成报告 | [AGENT-RUN.md](AGENT-RUN.md) |
-| Agent 回归测试（无 API） | [AGENT-EVAL.md](AGENT-EVAL.md) |
-| V6 流程图 | [diagrams/v6-agent-flow.md](diagrams/v6-agent-flow.md) |
-| RAG 真检索 / V3 vs V6 | [diagrams/rag-flow.md](diagrams/rag-flow.md) |
+| 版本对比表、怎么切换 V4/V5/V6 | [README · 版本演进速查](../../README.md#版本演进速查) |
+| V1–V6 设计思路、代码示例 | [design/VERSIONS.md](../design/VERSIONS.md) |
+| 接口、MCP、MySQL、扩展 | [design/ARCHITECTURE.md](../design/ARCHITECTURE.md) |
+| 跑 Agent 并生成报告 | [RUN.md](RUN.md) |
+| Agent 回归（无 API） | [EVAL.md](EVAL.md) |
+| V6 流程图 | [diagrams/v6-agent-flow.md](../diagrams/v6-agent-flow.md) |
+| RAG 流程 / V3 vs V6 | [diagrams/rag-flow.md](../diagrams/rag-flow.md) |
+| RAG 命令与环境变量 | [guides/RAG.md](../guides/RAG.md) |
+| AI 应用讲解稿 | [AI-APPLICATION-BRIEF.md](AI-APPLICATION-BRIEF.md) |
 | 校验文档内链 | `make doc-links` |
 
 ---
@@ -30,7 +33,7 @@ MySQL 慢日志 **多轮 Agent 分析**（Go + DeepSeek）：**RAG** 补专家�
 
 ## 演进主线（V1 → V6）
 
-> 详表见 [README · 总览表](../README.md#总览表v1-v6)；实现细节见 [VERSIONS](VERSIONS.md)。
+> 详表见 [README · 总览表](../../README.md#总览表v1-v6)；实现细节见 [VERSIONS](../design/VERSIONS.md)。
 
 ```text
 V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Calling → V6 Agent 循环
@@ -45,7 +48,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | V5 | API 级 `tool_calls` | `v5_tool_calling.go` |
 | **V6** | **NextAction 多轮（默认）** | `v6_agent.go` · `v6_action.go` |
 
-**V5 vs V6**（易混）：[README · V5 与 V6](../README.md#v5-vs-v6)
+**V5 vs V6**（易混）：[README · V5 与 V6](../../README.md#v5-vs-v6)
 
 ---
 
@@ -54,16 +57,16 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | 能力 | 说明 | 入口 |
 |------|------|------|
 | V6 Agent 循环 | `retrieve_rag` / `call_tool` / `analyze` / `ask_question` / `finish` | `make run` |
-| MCP | 慢日志分析、连库、EXPLAIN、建索引 dry_run | [ARCHITECTURE · MCP](ARCHITECTURE.md#mcp) |
+| MCP | 慢日志分析、连库、EXPLAIN、建索引 dry_run | [ARCHITECTURE · MCP](../design/ARCHITECTURE.md#mcp) |
 | 轨迹 | stderr 每轮决策 | `SLOWLOG_AGENT_TRACE=1` … `-agent-trace` |
 | 类型化状态 | `AgentState` 阶段机 + Prompt 摘要（控 Token） | `agent_state.go` |
-| 报告存档 | JSON + 完整/精简 MD/HTML | `make agent-run` → [AGENT-RUN](AGENT-RUN.md) |
+| 报告存档 | JSON + 完整/精简 MD/HTML | `make agent-run` → [RUN](RUN.md) |
 | 报告重生 | 从 JSON 再生成 MD/HTML | `make report-md JSON=reports/xxx.json` |
 | LLM 容错 | 工具名误写 `type`、`finish` 的 object `result` | `v6_action.go` · `flex_string.go` |
-| Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [AGENT-EVAL](AGENT-EVAL.md) |
+| Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [EVAL](EVAL.md) |
 | 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
 | 结构化 Trace | `llm.chat` / `tool.*` span + 耗时进 JSON/brief | `trace.go` · `agent-run` 且记录 rounds 时 |
-| 真 RAG | 按 `##` chunk + TF-IDF / embedding | [RAG 怎么用](RAG.md) · `make rag-check` |
+| 真 RAG | 11 篇知识库 + chunk + TF-IDF / embedding | [guides/RAG.md](../guides/RAG.md) · `make rag-test` |
 
 ---
 
@@ -73,12 +76,12 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 
 | 优先级 | 目标 | 价值 | 状态 |
 |:------:|------|------|:----:|
-| P0 | **Agent Eval**（golden case、轨迹/结论断言） | 证明可回归、工程化 | **已实现** → [AGENT-EVAL](AGENT-EVAL.md) |
+| P0 | **Agent Eval**（golden case、轨迹/结论断言） | 证明可回归、工程化 | **已实现** → [EVAL](EVAL.md) |
 | P0 | **类型化 AgentState** + context 摘要进 Prompt | 状态机、控 Token | **已实现** |
 | P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | **已实现** |
 | P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | **已实现** |
 | P1 | **真 RAG**（chunk + TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | **已实现** |
-| P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | **已实现** → [AGENT-MODE](AGENT-MODE.md) |
+| P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | **已实现** → [MODE](MODE.md) |
 | P2 | `ask_question` 真人机协同（暂停/恢复） | HITL | 计划 |
 | P2 | Plan-and-Execute（先 plan 再执行） | 对比 ReAct | 计划 |
 
@@ -162,9 +165,9 @@ internal/analyzer/v6_report*.go
 
 **第一次通读（2～3 小时）**
 
-1. 本页 → README 速查表 → [AGENT-RUN](AGENT-RUN.md) 跑一遍  
-2. [VERSIONS](VERSIONS.md) 只看 V3、V5、V6 三节  
-3. [ARCHITECTURE](ARCHITECTURE.md) 的 analysis-flow、mcp  
+1. [docs/INDEX](../INDEX.md) → 本页 → [RUN](RUN.md) 跑一遍  
+2. [VERSIONS](../design/VERSIONS.md) 只看 V3、V5、V6 三节  
+3. [ARCHITECTURE](../design/ARCHITECTURE.md) 的 analysis-flow、mcp  
 
 **汇报 / 演示前（1 小时）**
 

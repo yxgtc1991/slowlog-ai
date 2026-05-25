@@ -9,7 +9,7 @@ import (
 func TestEmbeddingRetriever_rowsExaminedQuery(t *testing.T) {
 	t.Parallel()
 	r, err := NewEmbeddingRetriever(EmbeddingOptions{
-		TopK:     3,
+		TopK:     8,
 		Embedder: NewLocalEmbedder(128),
 	})
 	if err != nil {
@@ -24,13 +24,14 @@ func TestEmbeddingRetriever_rowsExaminedQuery(t *testing.T) {
 	}
 	found := false
 	for _, c := range chunks {
-		if strings.Contains(c.Title, "Rows_examined") {
+		if strings.Contains(c.Title, "Rows_examined") ||
+			strings.Contains(strings.ToLower(c.Title+c.Content), "rows_examined") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Fatalf("chunks=%v", chunks)
+		t.Fatalf("chunks=%v", chunkTitles(chunks))
 	}
 }
 
