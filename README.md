@@ -8,8 +8,10 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 
 | 命令 | 一步说明 | 需要 API Key | 需要 MySQL |
 |------|----------|:------------:|:----------:|
-| `make run` | 控制台跑 **V6**；默认 `testdata/slowlog-products.txt`（`products` 表） | ✓ | 推荐 |
-| `make agent-run` | 同上慢日志 + 写入 `reports/`（HTML/MD/JSON，可复盘） | ✓ | 推荐 |
+| `make run` | 控制台跑 **V6**（默认）；`-agent-mode=v5` 切 Tool Calling | ✓ | 推荐 |
+| `make run-v5` | 同上，固定 **V5** Tool Calling | ✓ | 对比协议 |
+| `make agent-run` | V6 全流程 + 写入 `reports/`（brief.html 等） | ✓ | 推荐 |
+| `make agent-run-v5` | V5 Tool Calling + `reports/v5-run-*.json` | ✓ | 对比 |
 | `make agent-eval` | **回归测试**：标准用例检查轨迹与结论，**不调 LLM** | — | — |
 | `make rag-check` | RAG 检索试跑（默认 **TF-IDF**，可传查询词） | — | — |
 | `make rag-check-compare` | 并排对比 **tfidf** vs **embedding**（本地向量） | — | — |
@@ -33,6 +35,7 @@ make run                # 轻量演示
 | [VERSIONS](docs/VERSIONS.md) | V1–V6 设计与代码示例 |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | 接口、MCP、扩展开发 |
 | **[RAG 怎么用](docs/RAG.md)** | **模式、环境变量、命令示例（必读）** |
+| **[V5/V6 切换](docs/AGENT-MODE.md)** | **SLOWLOG_AGENT_MODE、run-v5、agent-run-v5** |
 
 ---
 
@@ -104,7 +107,7 @@ SLOWLOG_RAG=embedding make rag-check        # 试向量（默认 local，不调 
 | 能做 |  mainly 调工具 | 工具 + RAG + 分析 + 提问 + 结束 |
 | 入口 | `main.go` 注释块 | **`make run` 默认** |
 
-切换 V4/V5：编辑 `cmd/slowlog-ai/main.go` 对应注释块。
+切换 V5/V6：`SLOWLOG_AGENT_MODE=v5` 或 `make run-v5`（见 [AGENT-MODE](docs/AGENT-MODE.md)），无需改源码注释。
 
 ---
 

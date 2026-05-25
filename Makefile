@@ -3,7 +3,7 @@ GOPROXY ?= https://goproxy.cn,direct
 
 export GOPROXY
 
-.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare doc-diagrams doc-links agent-run agent-eval report-md run
+.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare doc-diagrams doc-links agent-run agent-run-v5 agent-eval report-md run run-v5
 
 deps:
 	go mod tidy
@@ -36,6 +36,9 @@ doc-links:
 agent-run:
 	go run ./cmd/agent-run
 
+agent-run-v5:
+	SLOWLOG_AGENT_MODE=v5 go run ./cmd/agent-run
+
 agent-eval:
 	go run ./cmd/agent-eval -v
 
@@ -46,3 +49,6 @@ report-md:
 
 run:
 	go run ./cmd/slowlog-ai
+
+run-v5:
+	SLOWLOG_AGENT_MODE=v5 go run ./cmd/slowlog-ai

@@ -1,14 +1,15 @@
-// 完整跑一遍 V6 Agent，并将每轮 LLM / RAG / MCP 输出保存到 reports/（便于复盘，无需重复消耗 Token）。
+// 完整跑一遍 Agent（V6 默认 / V5 Tool Calling），并将输出保存到 reports/。
 package main
 
 import (
+	"ai_slow_log/internal/agentmode"
 	"ai_slow_log/internal/analyzer"
+	"ai_slow_log/internal/bootstrap"
 	"ai_slow_log/internal/config"
 	"ai_slow_log/internal/llm"
 	"ai_slow_log/internal/mcp"
-	"ai_slow_log/internal/mysql"
-	prompt "ai_slow_log/internal/prompt/slowlog"
 	"ai_slow_log/internal/rag"
+	prompt "ai_slow_log/internal/prompt/slowlog"
 	"context"
 	"fmt"
 	"log"
@@ -20,12 +21,17 @@ import (
 func main() {
 	_ = config.LoadDotEnv(".env")
 
+	mode, args, err := agentmode.ResolveFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	reportDir := "reports"
 	slowLogPath := "testdata/slowlog-products.txt"
 	guided := true
 	trace := true
 
-	for _, arg := range os.Args[1:] {
+	for _, arg := range args {
 		switch {
 		case arg == "-guided=false", arg == "--guided=false":
 			guided = false
@@ -54,34 +60,61 @@ func main() {
 		log.Fatalf("llm: %v", err)
 	}
 
-	mcpServer := mcp.NewServer()
-	mcpServer.RegisterCapability(&mcp.AnalyzeSlowLogCapability{
-		Analyzer: analyzer.NewAnalyzer(
-			llmClient,
-			analyzer.WithPromptBuilder(&prompt.RagV3Prompt{}),
-			analyzer.WithRAGRetriever(analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever())),
-		),
+	boot, err := bootstrap.SetupMCP(llmClient, func(format string, v ...any) {
+		fmt.Fprintf(os.Stderr, format+"\n", v...)
 	})
-
-	if mysqlCfg, err := config.MustLoadMySQL(); err != nil {
-		log.Printf("mysql: %v (Agent 将跳过 MySQL 相关工具)", err)
-	} else {
-		client, err := mysql.NewClient(mysqlCfg)
-		if err != nil {
-			log.Printf("mysql: connect: %v", err)
-		} else {
-			defer client.Close()
-			mcp.RegisterMySQLCapabilities(mcpServer, client)
-			fmt.Fprintf(os.Stderr, "MySQL: %s:%d db=%s\n", mysqlCfg.Host, mysqlCfg.Port, mysqlCfg.Database)
-		}
+	if err != nil {
+		log.Fatalf("mcp: %v", err)
 	}
+	defer boot.Close()
 
-	caps := mcpServer.GetCapabilitiesAsV4()
+	caps := boot.Caps
 	toolNames := make([]string, 0, len(caps))
 	for _, c := range caps {
 		toolNames = append(toolNames, c.Name())
 	}
 
+	switch mode {
+	case agentmode.V5:
+		runV5Agent(ctx, llmClient, boot.Server, string(slowLog), reportDir)
+	default:
+		runV6Agent(ctx, llmClient, boot.Server, string(slowLog), reportDir, toolNames, guided, trace)
+	}
+}
+
+func runV5Agent(ctx context.Context, llmClient *llm.DeepSeekClient, server *mcp.Server, slowLog, reportDir string) {
+	fmt.Fprintln(os.Stderr, "▶ 开始 V5 Tool Calling 分析（结果将写入 reports/）...")
+	v5 := analyzer.NewV5ToolCallingAnalyzer(
+		llm.NewDeepSeekToolCallingAdapter(llmClient),
+		analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever()),
+		mcp.NewServerAsExecutor(server),
+		server.GetCapabilitiesAsV4(),
+	)
+	result, err := v5.Analyze(ctx, slowLog)
+	if err != nil {
+		log.Fatalf("v5 agent: %v", err)
+	}
+
+	report := analyzer.BuildV5RunReport(slowLog, result)
+	jsonPath, mdPath, err := analyzer.SaveV5RunReport(reportDir, report)
+	if err != nil {
+		log.Fatalf("save report: %v", err)
+	}
+
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println("最终结论（V5）")
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println(result.Analysis)
+	analyzer.PrintV5ToolCallingSummary(result)
+
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println("报告已保存")
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println("JSON:", jsonPath)
+	fmt.Println("MD:  ", mdPath)
+}
+
+func runV6Agent(ctx context.Context, llmClient *llm.DeepSeekClient, server *mcp.Server, slowLog, reportDir string, toolNames []string, guided, trace bool) {
 	opts := []analyzer.V6AgentOption{
 		analyzer.WithAgentRecordRounds(true),
 		analyzer.WithAgentVerbose(trace),
@@ -92,22 +125,21 @@ func main() {
 	v6 := analyzer.NewV6AgentAnalyzer(
 		llmClient,
 		analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever()),
-		mcp.NewServerAsExecutor(mcpServer),
-		caps,
+		mcp.NewServerAsExecutor(server),
+		server.GetCapabilitiesAsV4(),
 		opts...,
 	)
 
 	if guided {
 		fmt.Fprintln(os.Stderr, "ℹ️  已启用 guided 推荐流程（RAG → MySQL → EXPLAIN → 索引 dry_run → finish）")
 	}
-
 	fmt.Fprintln(os.Stderr, "▶ 开始 V6 Agent 分析（结果将写入 reports/）...")
-	result, err := v6.Analyze(ctx, string(slowLog))
+	result, err := v6.Analyze(ctx, slowLog)
 	if err != nil {
 		log.Fatalf("agent: %v", err)
 	}
 
-	report := analyzer.BuildV6RunReport(string(slowLog), result, toolNames)
+	report := analyzer.BuildV6RunReport(slowLog, result, toolNames)
 	paths, err := analyzer.SaveV6RunReport(reportDir, report)
 	if err != nil {
 		log.Fatalf("save report: %v", err)

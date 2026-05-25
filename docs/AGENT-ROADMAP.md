@@ -78,7 +78,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | **已实现** |
 | P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | **已实现** |
 | P1 | **真 RAG**（chunk + TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | **已实现** |
-| P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | 计划 |
+| P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | **已实现** → [AGENT-MODE](AGENT-MODE.md) |
 | P2 | `ask_question` 真人机协同（暂停/恢复） | HITL | 计划 |
 | P2 | Plan-and-Execute（先 plan 再执行） | 对比 ReAct | 计划 |
 
@@ -95,7 +95,9 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 cp .env.example .env          # DEEPSEEK_API_KEY；可选 MYSQL_*=test
 
 make run                      # 默认 V6 演示
-make agent-run                # 全流程 + 报告（推荐复盘）
+make run-v5                   # V5 Tool Calling 演示
+make agent-run                # V6 全流程 + 报告（推荐复盘）
+make agent-run-v5             # V5 + v5-run 报告
 make report-md JSON=reports/agent-run-xxx.json
 make mysql-check              # 仅测 MySQL
 make doc-links                # 校验 md 链接
@@ -120,7 +122,7 @@ SLOWLOG_AGENT_TRACE=1 go run ./cmd/slowlog-ai -agent-trace
 ## 代码地图（常改哪里）
 
 ```text
-cmd/slowlog-ai/main.go     # 默认 V6；注释块可开 V4/V5
+cmd/slowlog-ai/main.go     # 默认 V6；SLOWLOG_AGENT_MODE=v5 切 Tool Calling
 cmd/agent-run/main.go      # 完整体验 + 写 reports/
 internal/analyzer/v6_agent.go
 internal/prompt/slowlog/v6_action.go
@@ -186,7 +188,9 @@ internal/analyzer/v6_report*.go
 
 | 日期 | Commit | 说明 |
 |------|--------|------|
-| （待提交） | — | **真 RAG**：`TFIDFRetriever` 检索 `internal/rag/slowlog/docs`；`SLOWLOG_RAG=mock` 回退 Mock |
+| （待提交） | — | **V5/V6 并列**：`SLOWLOG_AGENT_MODE` + `make run-v5` / `agent-run-v5` |
+| 2026-05-25 | `1d75e28` | **真 RAG**：TF-IDF + `slowlog/docs` embed |
+| 2026-05-25 | `a73aae8` | **RAG chunk/向量**：按 `##` 切分 + embedding 内存 TopK |
 | 2026-05-25 | `fecce6e` | **结构化 Trace**：`trace.spans`（`llm.chat` / `tool.*` + `duration_ms`）；brief/HTML 逐轮「耗时」列 |
 | 2026-05-25 | `c6017c2` | **工具错误码**：`toolerr`（`code` / `retryable`）；失败写入 AgentState 摘要与 `action_outcome` |
 | 2026-05-22 | `3030261` | **Agent 状态**：`AgentState` 阶段机 + Prompt 摘要；默认 `products` 慢日志；EXPLAIN 对齐慢日志 SQL |
