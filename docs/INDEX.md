@@ -35,6 +35,9 @@ docs/
 | AI 应用向讲解稿 | [agent/AI-APPLICATION-BRIEF.md](agent/AI-APPLICATION-BRIEF.md) |
 | 封存后复习清单 | [agent/REVIEW-CHECKLIST.md](agent/REVIEW-CHECKLIST.md) |
 | Agent/RAG 技术调研问答 | [agent/RESEARCH-QA.md](agent/RESEARCH-QA.md) |
+| 生产化缺口与优化路线 | [agent/PRODUCTION-GAPS.md](agent/PRODUCTION-GAPS.md) |
+| 真实 LLM 抽检清单 | [agent/REAL-RUN-CHECKLIST.md](agent/REAL-RUN-CHECKLIST.md) |
+| 日志接入设计（P3 草案） | [design/LOG-INGESTION.md](design/LOG-INGESTION.md) |
 | V1–V6 设计与代码示例 | [design/VERSIONS.md](design/VERSIONS.md) |
 | 接口、MCP、MySQL、扩展 | [design/ARCHITECTURE.md](design/ARCHITECTURE.md) |
 | RAG 模式与环境变量 | [guides/RAG.md](guides/RAG.md) |

@@ -1,0 +1,13 @@
+# Time: 2026-05-21T12:05:00.000000Z
+# User@Host: report[report] @ 10.0.2.3 []
+# Query_time: 5.800  Lock_time: 0.001
+# Rows_sent: 500  Rows_examined: 1200000
+SET timestamp=1747811100;
+# 多表 JOIN：orders 驱动，items 无合适索引时易大范围扫描
+SELECT o.id, o.created_at, i.sku, i.qty
+FROM orders o
+JOIN order_items i ON i.order_id = o.id
+WHERE o.created_at >= '2026-01-01'
+  AND o.status = 'shipped'
+ORDER BY o.created_at DESC
+LIMIT 500;

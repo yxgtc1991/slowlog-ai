@@ -93,7 +93,7 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 
 		prompt := promptv6.BuildAgentPromptV6(
 			slowLog,
-			a.availableTools,
+			ToolsForPhase(a.state.Phase, a.availableTools),
 			a.conversationHistory,
 			a.state.PromptSummary(400),
 			a.extraGuide,

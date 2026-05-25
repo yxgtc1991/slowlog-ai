@@ -11,7 +11,7 @@
 | 层级 | 命令 | 耗时 | 需要 API | 测什么 |
 |------|------|------|:--------:|--------|
 | 包级单测 | `make test` | ~2s | 否 | 解析、报告、分词、配置、toolerr 等 |
-| RAG 回归 | `make rag-test` | ~1s | 否 | TF-IDF / 分块 / **10 条**检索 golden |
+| RAG 回归 | `make rag-test` | ~1s | 否 | TF-IDF / 分块 / **15 条**检索 golden |
 | Agent 回归 | `make agent-eval` | ~1s | 否 | **5 条** V6 轨迹 golden（ScriptLLM） |
 
 **合并前推荐**（与 CI 一致）：
@@ -48,7 +48,7 @@ go test ./internal/analyzer/... -run TestAgentState -v
 
 ## RAG 回归（`make rag-test`）
 
-- 知识库：`internal/rag/slowlog/docs/**/*.md`（**16 篇**，按 `##` 切块）
+- 知识库：`internal/rag/slowlog/docs/**/*.md`（**21 篇**，按 `##` 切块）
 - 改知识库或 `tokenize` 后 **必跑**
 - 试查不跑 LLM：`make rag-check "你的查询词"`
 

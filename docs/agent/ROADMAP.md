@@ -23,6 +23,7 @@
 | RAG 命令与环境变量 | [guides/RAG.md](../guides/RAG.md) |
 | AI 应用讲解稿 | [AI-APPLICATION-BRIEF.md](AI-APPLICATION-BRIEF.md) |
 | Agent/RAG 调研问答（题单对照） | [RESEARCH-QA.md](RESEARCH-QA.md) |
+| 生产化缺口与优化路线 | [PRODUCTION-GAPS.md](PRODUCTION-GAPS.md) |
 | 校验文档内链 | `make doc-links` |
 
 ---

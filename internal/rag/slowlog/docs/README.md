@@ -26,7 +26,14 @@
 - `boundaries/lock_contention.md`
 - `actions/index_for_products_price_filter.md`
 - `patterns/covering_index_basics.md`
+- `patterns/join_driving_table.md`
+- `patterns/lock_wait_vs_scan.md`
 - `metrics/slowlog_header_fields.md`
+- `anti-patterns/deep_offset.md`
+- `anti-patterns/over_indexing.md`
+- `boundaries/schema_change.md`
+
+测试慢日志（多场景）：仓库根目录 `testdata/README.md`。
 
 ## 验证
 

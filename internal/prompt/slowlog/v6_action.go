@@ -79,9 +79,9 @@ func BuildAgentPromptV6(
 		sb.WriteString("\n")
 	}
 
-	// 2. 可用工具列表
+	// 2. 可用工具列表（按阶段过滤时可能为空，此时应 analyze / finish）
 	if len(availableTools) > 0 {
-		sb.WriteString("【可用工具】\n")
+		sb.WriteString("【本阶段可用工具】\n")
 		for i, tool := range availableTools {
 			meta := DescribeCapabilityV4(tool)
 			sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, meta.Name))
@@ -92,6 +92,8 @@ func BuildAgentPromptV6(
 			}
 			sb.WriteString("\n")
 		}
+	} else if strings.TrimSpace(contextSummary) != "" {
+		sb.WriteString("【本阶段可用工具】\n（当前阶段无新增 MCP 工具，请使用 analyze 归纳或 finish 输出结论。）\n\n")
 	}
 
 	// 3. 行动类型说明
@@ -120,6 +122,8 @@ func BuildAgentPromptV6(
 5. finish - 完成分析
    - 当你已经收集足够信息，可以给出最终分析结果时使用
    - 必须提供 result（最终分析结果，包含问题诊断和优化建议）
+   - result 中须包含一行「证据：」引用慢日志指标（如 Query_time、Lock_time、Rows_examined、Rows_sent）；
+     若已 EXPLAIN 则写明 type/key/rows；未连库则写明「仅基于慢日志推断」
    - 这是分析的终点
 
 `)
@@ -168,7 +172,7 @@ func BuildAgentPromptV6(
 1. 每一步都要有明确的 reasoning（为什么选择这个行动）
 2. 调用 MCP 工具时：type 必须是 "call_tool"，工具名写在 tool_name（如 analyze_slow_log），禁止把工具名写在 type
 3. 如果选择 retrieve_rag，rag_query 应该是有针对性的查询（例如："rows_examined 高如何优化"）
-4. 如果选择 finish，result 必须是字符串类型的完整分析报告（禁止把 result 写成 JSON 对象）
+4. 如果选择 finish，result 必须是字符串类型的完整分析报告（禁止把 result 写成 JSON 对象），且含「证据：」一行
 5. 输出必须是有效的 JSON，可以直接被程序解析
 6. 若【Agent 状态与上下文摘要】中工具失败：看 code 与「可重试/勿重试」——mysql_table_not_found 等应修正 SQL/表名后再 EXPLAIN，勿盲目重复同一调用
 

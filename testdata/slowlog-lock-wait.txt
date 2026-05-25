@@ -1,0 +1,7 @@
+# Time: 2026-05-21T11:20:00.000000Z
+# User@Host: order_svc[order_svc] @ 10.0.1.8 []
+# Query_time: 8.120  Lock_time: 7.950
+# Rows_sent: 1  Rows_examined: 12
+SET timestamp=1747807200;
+# 典型锁等待：扫描行不多，但 Lock_time 接近 Query_time
+UPDATE orders SET status = 'paid' WHERE id = 10086;

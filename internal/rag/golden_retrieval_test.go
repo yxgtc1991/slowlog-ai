@@ -58,6 +58,26 @@ func TestGoldenRetrieval_productsScenario(t *testing.T) {
 			query:       "慢日志 Query_time Rows_examined 头字段",
 			wantInTitle: "头字段",
 		},
+		{
+			query:       "JOIN orders order_items 驱动表 连接键",
+			wantInTitle: "JOIN",
+		},
+		{
+			query:       "Lock_time 锁等待 UPDATE 热点行",
+			wantInTitle: "锁等待",
+		},
+		{
+			query:       "OFFSET 深分页 LIMIT 越来越慢",
+			wantInTitle: "深分页",
+		},
+		{
+			query:       "Rows_examined 接近 Rows_sent 已有 key 不要加索引",
+			wantInTitle: "加索引",
+		},
+		{
+			query:       "dry_run DDL 变更评审 pt-osc",
+			wantInTitle: "变更",
+		},
 	}
 
 	for _, tc := range cases {

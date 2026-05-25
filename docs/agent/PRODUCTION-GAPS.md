@@ -1,0 +1,90 @@
+# 生产化缺口与优化路线
+
+[文档索引](../INDEX.md) · [调研问答](RESEARCH-QA.md) · [测试指南](TESTING.md) · [路线图](ROADMAP.md)
+
+> **定位**：slowlog-ai 当前是 **工程化 PoC**（CLI + Agent + RAG + MCP + 回归）。本文列出相对「全量生产上线」的缺口，按 **优先级 + 状态** 跟踪；逐项消化，避免对外表述与实现脱节。
+
+**推荐对外说法**：具备上线演进基础的慢 SQL Agent 诊断原型 — 采集与审批接入待建设。
+
+---
+
+## 优先级说明
+
+| 级别 | 含义 | 目标 |
+|:----:|------|------|
+| **P0** | 安全与叙事底线 | 不夸大已上线；风险可控 |
+| **P1** | 演示与回归加固 | 多场景可讲、可测，不绑单表 |
+| **P2** | 工程质量提升 | 结论可追溯、Token/误调更稳 |
+| **P3** | 生产形态 | 服务化、接入日志链路、规模化 RAG |
+
+状态：`待做` · `进行中` · `已完成`
+
+---
+
+## 缺口总表
+
+| ID | 优先级 | 缺口 | 现状 | 目标 | 状态 |
+|:--:|:------:|------|------|------|:----:|
+| G01 | P0 | 对外表述与真实边界 | 文档已写 PoC/封存 | 统一口径：非全量线上服务 | 已完成 |
+| G02 | P0 | 索引/DDL 误操作 | `add_mysql_index` 默认 dry_run | 保持默认；文档强调审批 | 已完成 |
+| G03 | P0 | 凭证不进 Git | `.env` + example | CI/文档禁止提交密钥 | 已完成 |
+| G04 | P1 | 测试数据单场景 | 仅 `slowlog-products.txt` | +锁等待 / JOIN / 索引命中 等 | 已完成 |
+| G05 | P1 | 知识库偏单表 price | 16 篇，products 对齐好 | +JOIN / 深分页 / 过度索引 等 | 已完成 |
+| G06 | P1 | 检索 golden 覆盖不足 | 10 条 | 与新 md、新慢日志对齐 | 已完成 |
+| G07 | P2 | 结论缺少强制证据字段 | finish 自由文本 | Prompt 要求 result 含「证据：」行 | 已完成 |
+| G08 | P2 | 工具列表一次性注入 | 全量 MCP Meta 进 Prompt | 按 `AgentPhase` 渐进披露 | 已完成 |
+| G09 | P2 | LLM 非确定性 | 仅脚本 eval 确定性 | 真实 run 抽检 + 报告 `-report` 基线 | 进行中 |
+| G10 | P2 | `ask_question` 不阻塞 | 只写状态 | HITL 暂停/恢复（stdin 即可） | 待做 |
+| G11 | P3 | 无 HTTP/API 服务 | CLI only | REST/内部 RPC + 异步任务 | 待做 |
+| G12 | P3 | 未接日志链路 | 与 Fluent Bit 叙事分离 | Bit/平台 → 对象存储 → 触发诊断 | 进行中 |
+| G13 | P3 | RAG 内存索引 | embed + 进程内 TF-IDF | 向量库版本、热更新、按租户隔离 | 待做 |
+| G14 | P3 | 无多租户与审计 | 单 `.env` 连库 | 实例注册、操作审计、RBAC | 待做 |
+| G15 | P3 | 无成本与限流 | 每 run 直调 LLM | 配额、并发、超时、熔断 | 待做 |
+| G16 | P3 | Query 改写 / 多路召回 | 单路 `rag_query` | 规则抽取 + 可选 RRF | 待做 |
+
+---
+
+## 分步执行计划
+
+### 阶段 A — P1 演示加固 ✅
+
+1. **G04** `testdata/slowlog-{lock-wait,join-large,index-hit}.txt` + `testdata/README.md`  
+2. **G05** 知识库 +5（JOIN、锁等待、深分页、过度索引、schema 变更边界）→ **21 篇**  
+3. **G06** 检索 golden +5  
+4. `make check` 通过  
+
+### 阶段 B — P2 质量（改 Agent 行为，仍 CLI）← 当前
+
+1. ~~**G07**~~ Prompt 已要求 finish 含「证据：」；可选：eval 断言 `FinalContains: "证据"`  
+2. ~~**G08**~~ `ToolsForPhase` 过滤 Prompt 内工具列表（`tools_for_phase.go`）  
+3. **G09** [REAL-RUN-CHECKLIST.md](REAL-RUN-CHECKLIST.md) 已建；按需填抽检记录表（**下一步：你真跑一轮**）  
+4. **G10** `ask_question` 读 stdin（环境变量开关）  
+
+### 阶段 C — P3 生产形态（新模块或新仓库）
+
+1. **G11** 最小 HTTP：`POST /analyze` 提交慢日志文本，返回 report id  
+2. **G12** 设计草案：[LOG-INGESTION.md](../design/LOG-INGESTION.md)；实现 webhook 待做  
+3. **G13** `Retriever` 接 Milvus/pgvector + 构建任务  
+4. **G14～G16** 租户、限流、多路召回按业务需要排期  
+
+---
+
+## 变更记录
+
+| 日期 | 说明 |
+|------|------|
+| 2026-05-21 | 初版：缺口表 + P0～P3 分阶段 |
+| 2026-05-21 | 阶段 A 完成：+3 慢日志、+5 知识库、+5 golden；G07 Prompt 证据行 |
+| 2026-05-21 | G12 设计草案：LOG-INGESTION.md |
+
+---
+
+## 完成度自检
+
+```bash
+make check
+make rag-check "JOIN 驱动表"
+ls testdata/slowlog-*.txt
+```
+
+对外交流前对照：**G01～G03 必能口述**；**G04～G06 有样例可演示**；**G11～G16 只说路线图、不声称已上线**。

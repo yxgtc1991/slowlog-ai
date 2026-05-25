@@ -1,0 +1,12 @@
+# Time: 2026-05-21T13:10:00.000000Z
+# User@Host: app[app] @ localhost []
+# Query_time: 0.045  Lock_time: 0.000
+# Rows_sent: 20  Rows_examined: 22
+SET timestamp=1747815000;
+# 索引命中：Rows_examined 接近 Rows_sent，不宜盲目建议加索引
+# 表 products，索引 idx_price_created(price, created_at) 可用
+SELECT id, price, created_at
+FROM products
+WHERE price >= 100 AND price < 200
+ORDER BY created_at DESC
+LIMIT 20;
