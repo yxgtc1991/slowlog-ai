@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	promptv6 "ai_slow_log/internal/prompt/slowlog"
+	"ai_slow_log/internal/toolerr"
 	"context"
 	"fmt"
 )
@@ -128,8 +129,10 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 				toolArgs,
 			)
 			if err != nil {
-				roundRec.ActionError = err.Error()
-				a.state.RecordTool(decision.NextAction.ToolName, nil, err)
+				te := toolerr.From(decision.NextAction.ToolName, err)
+				roundRec.ActionError = te.Message
+				roundRec.ActionOutcome = te.ToMap()
+				a.state.RecordToolFailure(te.Tool, te.Code, te.Message, te.Retryable)
 			} else {
 				roundRec.ActionOutcome = result
 				toolResults[decision.NextAction.ToolName] = result

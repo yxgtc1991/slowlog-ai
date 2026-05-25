@@ -13,9 +13,16 @@ type Expect struct {
 	FinalNotContains []string
 	MinIterations    int
 	MaxIterations    int
-	ToolsMustCall    []string // 轨迹中须出现过的 call_tool（顺序不限）
-	NoActionErrors   bool     // 每轮 ActionError 为空
-	FinalPhase       string   // 期望终态，如 finished
+	ToolsMustCall    []string                     // 轨迹中须出现过的 call_tool（顺序不限）
+	NoActionErrors   bool                         // 每轮 ActionError 为空
+	FinalPhase       string                       // 期望终态，如 finished
+	ToolFailures     map[string]ToolFailureExpect // 工具名 -> 失败码断言
+}
+
+// ToolFailureExpect 工具失败时的错误码期望。
+type ToolFailureExpect struct {
+	Code      string
+	Retryable bool
 }
 
 // Case 一条 golden eval：脚本化 LLM + 断言。

@@ -170,6 +170,7 @@ func BuildAgentPromptV6(
 3. 如果选择 retrieve_rag，rag_query 应该是有针对性的查询（例如："rows_examined 高如何优化"）
 4. 如果选择 finish，result 必须是字符串类型的完整分析报告（禁止把 result 写成 JSON 对象）
 5. 输出必须是有效的 JSON，可以直接被程序解析
+6. 若【Agent 状态与上下文摘要】中工具失败：看 code 与「可重试/勿重试」——mysql_table_not_found 等应修正 SQL/表名后再 EXPLAIN，勿盲目重复同一调用
 
 现在请分析慢日志，并决定下一步要做什么：
 

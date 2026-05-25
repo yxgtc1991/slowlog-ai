@@ -58,6 +58,24 @@ func assertResult(result *analyzer.V6AgentResult, exp Expect) []string {
 		}
 	}
 
+	for tool, want := range exp.ToolFailures {
+		if result.State == nil {
+			errs = append(errs, "agent state is nil")
+			break
+		}
+		got, ok := result.State.Tools[tool]
+		if !ok || got.Error == "" {
+			errs = append(errs, fmt.Sprintf("tool %q expected failure", tool))
+			continue
+		}
+		if want.Code != "" && got.Code != want.Code {
+			errs = append(errs, fmt.Sprintf("tool %q code=%q want %q", tool, got.Code, want.Code))
+		}
+		if got.Retryable != want.Retryable {
+			errs = append(errs, fmt.Sprintf("tool %q retryable=%v want %v", tool, got.Retryable, want.Retryable))
+		}
+	}
+
 	if exp.FinalPhase != "" && string(result.FinalPhase) != exp.FinalPhase {
 		errs = append(errs, fmt.Sprintf("final_phase=%q want %q", result.FinalPhase, exp.FinalPhase))
 	}

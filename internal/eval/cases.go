@@ -112,8 +112,11 @@ func AllCases() []Case {
 					{Type: string(promptv6.ActionCallTool), ToolName: "connect_mysql_instance"},
 					{Type: string(promptv6.ActionFinish)},
 				},
-				FinalContains:  []string{"全表扫描"},
-				NoActionErrors: false, // 允许 round 有 action_error
+				FinalContains: []string{"全表扫描"},
+				ToolFailures: map[string]ToolFailureExpect{
+					"connect_mysql_instance": {Code: "mysql_connection", Retryable: true},
+				},
+				NoActionErrors: false,
 			},
 		},
 	}

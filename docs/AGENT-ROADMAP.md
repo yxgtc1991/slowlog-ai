@@ -59,6 +59,8 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 | 报告存档 | JSON + 完整/精简 MD/HTML | `make agent-run` → [AGENT-RUN](AGENT-RUN.md) |
 | 报告重生 | 从 JSON 再生成 MD/HTML | `make report-md JSON=reports/xxx.json` |
 | LLM 容错 | 工具名误写 `type`、`finish` 的 object `result` | `v6_action.go` · `flex_string.go` |
+| Agent 回归 | golden 标准用例，无 API | `make agent-eval` → [AGENT-EVAL](AGENT-EVAL.md) |
+| 工具错误码 | `code` + `retryable` 写入状态与报告 | `toolerr/tool_error.go` |
 
 ---
 
@@ -70,7 +72,7 @@ V1 问模型 → V2 JSON 约束 → V3 +RAG → V4 能力感知 → V5 Tool Call
 |:------:|------|------|:----:|
 | P0 | **Agent Eval**（golden case、轨迹/结论断言） | 证明可回归、工程化 | **已实现** → [AGENT-EVAL](AGENT-EVAL.md) |
 | P0 | **类型化 AgentState** + context 摘要进 Prompt | 状态机、控 Token | **已实现** |
-| P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | 计划 |
+| P0 | 工具统一错误码（`retryable` 等） | MCP / Agent 协作 | **已实现** |
 | P1 | **结构化 Trace**（span、耗时写入报告 JSON） | 可观测 | 计划 |
 | P1 | **真 RAG**（chunk + 向量/TF-IDF TopK，替换 Mock） | V3 做实、query 相关 | 计划 |
 | P1 | **Tool Calling 模式**（与 V6 NextAction 并列） | 对齐业界协议 | 计划 |
@@ -171,10 +173,43 @@ internal/analyzer/v6_report*.go
 
 ---
 
-## 变更记录（手动维护）
+## 变更记录（与 git 提交一一对应）
 
-| 日期 | 里程碑 |
-|------|--------|
-| — | V1–V6 演进、MCP MySQL、文档拆分 |
-| — | `agent-run`、多格式报告、GoLand 友好 MD |
-| — | commit `97f47c5` Agent 完整体验与生成报告 |
+> 新 **Agent / MCP** commit 合并后补一行：`git log -1 --format='%ad %h %s' --date=short`。纯文档 commit 可不记。
+
+### Agent 工程化（2026-05）
+
+| 日期 | Commit | 说明 |
+|------|--------|------|
+| （待提交） | — | **工具错误码**：`toolerr`（`code` / `retryable`）；失败写入 AgentState 摘要与报告 `action_outcome` |
+| 2026-05-22 | `3030261` | **Agent 状态**：`AgentState` 阶段机 + Prompt 摘要；默认 `products` 慢日志；EXPLAIN 自动对齐慢日志 SQL |
+| 2026-05-22 | `e3c48ed` | **Agent 回归**：golden 标准用例、`make agent-eval`、轨迹/结论断言 |
+| 2026-05-22 | `97f47c5` | **完整体验**：`agent-run`、报告 JSON/MD/HTML/brief、guided 流程、轨迹与报告修复 |
+
+### MCP 真连库（2026-05）
+
+| 日期 | Commit | 说明 |
+|------|--------|------|
+| 2026-05-21 | `11261f4` | **MySQL 工具**：`connect_mysql_instance`、`explain_mysql_query`、`add_mysql_index`（默认 dry_run） |
+
+### V6 Agent（2026-01）
+
+| 日期 | Commit | 说明 |
+|------|--------|------|
+| 2026-01-16 | `d957542` | **V6**：`NextAction` 多轮循环（RAG / 工具 / analyze / finish），`v6_agent.go` |
+
+### MCP 与能力层（2026-01）
+
+| 日期 | Commit | 说明 |
+|------|--------|------|
+| 2026-01-16 | `cad265d` | **MCP 决策**：LLM 按能力描述选工具（V5 方向雏形） |
+| 2026-01-15 | `8dcea79` | **能力感知**：Registry 列出能力 Meta，供 Prompt 注入 |
+| 2026-01-14 | `25504a8` | **能力抽象**：`Capability` 接口与 MCP Server 骨架 |
+
+### Prompt 与 RAG（2026-01）
+
+| 日期 | Commit | 说明 |
+|------|--------|------|
+| 2026-01-13 | `e64b41e` | **V3 RAG**：知识库检索注入 Prompt |
+| 2026-01-13 | `fd87f92` | **V2**：JSON 输出、confirmed/suspected，减少编造 |
+| 2026-01-12 | `09571b0` | **V1**：最简慢日志 Prompt，直连 LLM |

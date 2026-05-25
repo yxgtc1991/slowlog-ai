@@ -52,9 +52,11 @@ type RAGStateEntry struct {
 
 // ToolStateEntry 单次工具调用在状态中的记录。
 type ToolStateEntry struct {
-	OK      bool   `json:"ok"`
-	Summary string `json:"summary,omitempty"`
-	Error   string `json:"error,omitempty"`
+	OK        bool   `json:"ok"`
+	Code      string `json:"code,omitempty"`
+	Retryable bool   `json:"retryable,omitempty"`
+	Summary   string `json:"summary,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 // AgentState 类型化 Agent 上下文（替代 map[string]interface{}）。
@@ -95,12 +97,22 @@ func (s *AgentState) RecordTool(name string, result interface{}, err error) {
 	entry := ToolStateEntry{}
 	if err != nil {
 		entry.Error = err.Error()
-	} else {
+	} else if result != nil {
 		entry.OK = true
 		entry.Summary = summarizeToolResult(name, result, 320)
 		s.advancePhaseForTool(name)
 	}
 	s.Tools[name] = entry
+}
+
+// RecordToolFailure 记录结构化工具错误（code / retryable 进 Prompt 摘要）。
+func (s *AgentState) RecordToolFailure(name, code, message string, retryable bool) {
+	s.Tools[name] = ToolStateEntry{
+		OK:        false,
+		Code:      code,
+		Retryable: retryable,
+		Error:     message,
+	}
 }
 
 func (s *AgentState) advancePhaseForTool(name string) {
@@ -173,7 +185,17 @@ func (s *AgentState) PromptSummary(maxField int) string {
 		b.WriteString("- 工具 ")
 		b.WriteString(name)
 		if t.Error != "" {
-			b.WriteString(fmt.Sprintf(": 失败 %s", truncateText(t.Error, 120)))
+			b.WriteString(": 失败")
+			if t.Code != "" {
+				b.WriteString(fmt.Sprintf(" [%s]", t.Code))
+			}
+			if t.Retryable {
+				b.WriteString(" 可重试")
+			} else {
+				b.WriteString(" 勿重试")
+			}
+			b.WriteString(" — ")
+			b.WriteString(truncateText(t.Error, 100))
 		} else {
 			b.WriteString(fmt.Sprintf(": OK — %s", truncateText(t.Summary, maxField)))
 		}

@@ -84,7 +84,11 @@ func (a *V6AgentAnalyzer) traceAfterAction(action promptv6.NextAction, toolResul
 	switch action.Type {
 	case promptv6.ActionCallTool:
 		if ent, ok := a.state.Tools[action.ToolName]; ok && ent.Error != "" {
-			a.tracef("  ❌ 工具 %s 失败: %s\n", action.ToolName, ent.Error)
+			retry := "勿重试"
+			if ent.Retryable {
+				retry = "可重试"
+			}
+			a.tracef("  ❌ 工具 %s 失败 [%s] %s: %s\n", action.ToolName, ent.Code, retry, ent.Error)
 			return
 		}
 		if res, ok := toolResults[action.ToolName]; ok {

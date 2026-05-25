@@ -106,6 +106,8 @@ analyzer := analyzer.NewAnalyzer(
 
 **V6 `AgentState`**（`internal/analyzer/agent_state.go`）：用阶段 `init → rag_done → db_ready → explained → index_planned → analyzed → finished` 替代 `map[string]interface{}`；每轮 Prompt 只注入 `PromptSummary()`（工具要点 + RAG 标题），完整工具 JSON 仍写入报告 `tool_results`，不重复灌进 LLM。
 
+**工具错误码**（`internal/toolerr`）：MCP 失败经 `toolerr.From` 映射为 `code`（如 `mysql_table_not_found`）与 `retryable`；Agent 摘要中标注「可重试 / 勿重试」，报告 `action_outcome` 含 `{ok:false, code, message, retryable}`。
+
 ### v1-v3-example
 
 **V1–V3 集成示例**（V3 + RAG）：
