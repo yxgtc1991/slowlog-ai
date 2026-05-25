@@ -133,6 +133,49 @@ func TestHandleGetJob_ok(t *testing.T) {
 	}
 }
 
+func TestAPIKey_blocksWithoutKey(t *testing.T) {
+	t.Parallel()
+	s := testServer(t)
+	s.apiKey = "test-api-key"
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/instances", s.handleListInstances)
+	req := httptest.NewRequest(http.MethodGet, "/v1/instances", nil)
+	rec := httptest.NewRecorder()
+	s.wrap(mux).ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAPIKey_acceptsBearer(t *testing.T) {
+	t.Parallel()
+	s := testServer(t)
+	s.apiKey = "test-api-key"
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/instances", s.handleListInstances)
+	req := httptest.NewRequest(http.MethodGet, "/v1/instances", nil)
+	req.Header.Set("Authorization", "Bearer test-api-key")
+	rec := httptest.NewRecorder()
+	s.wrap(mux).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAPIKey_healthPublic(t *testing.T) {
+	t.Parallel()
+	s := testServer(t)
+	s.apiKey = "test-api-key"
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/health", s.handleHealth)
+	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
+	rec := httptest.NewRecorder()
+	s.wrap(mux).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d", rec.Code)
+	}
+}
+
 func TestAnalyzeResponse_shape(t *testing.T) {
 	t.Parallel()
 	var resp analyzeResponse

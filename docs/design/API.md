@@ -53,19 +53,6 @@ X-API-Key: <SLOWLOG_API_KEY>
 
 （`limits` 仅在启用限流时出现。）
 
-### `GET /metrics`（D1 可观测）
-
-Prometheus 文本格式（`text/plain; version=0.0.4`）。需通过上节 API Key（若已配置）。
-
-主要指标：
-
-| 指标 | 说明 |
-|------|------|
-| `slowlog_http_requests_total` | 按 method / route / code 计数 |
-| `slowlog_analyze_total` | analyze 成功/失败次数 |
-| `slowlog_analyze_duration_seconds_sum` | analyze 累计耗时 |
-| `slowlog_rate_limit_rejected_total` | 限流拒绝次数 |
-
 ### `GET /v1/instances`
 
 ```json

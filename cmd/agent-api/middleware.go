@@ -14,6 +14,7 @@ func (s *server) wrap(mux http.Handler) http.Handler {
 	if s.limits != nil && s.limits.Enabled() {
 		h = s.limits.Middleware(h)
 	}
+	h = s.apiKeyMiddleware(h)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rid := strings.TrimSpace(r.Header.Get("X-Request-ID"))
 		if rid == "" {

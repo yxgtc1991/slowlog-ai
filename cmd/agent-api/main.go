@@ -56,6 +56,7 @@ func main() {
 		limits:             ops.NewLimitsFromEnv(),
 		requireInstance:    strings.TrimSpace(os.Getenv("SLOWLOG_REQUIRE_INSTANCE_ID")) == "1",
 		adminToken:         strings.TrimSpace(os.Getenv("SLOWLOG_ADMIN_TOKEN")),
+		apiKey:             strings.TrimSpace(os.Getenv("SLOWLOG_API_KEY")),
 	}
 
 	mux := http.NewServeMux()
@@ -89,6 +90,7 @@ type server struct {
 	limits             *ops.Limits
 	requireInstance    bool
 	adminToken         string
+	apiKey             string
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
