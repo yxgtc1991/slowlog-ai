@@ -3,7 +3,7 @@ GOPROXY ?= https://goproxy.cn,direct
 
 export GOPROXY
 
-.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare rag-test test check real-run-samples doc-diagrams doc-links agent-api api-test agent-run agent-run-v5 agent-eval report-md run run-v5
+.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare rag-test rag-index-build rag-index-status test check real-run-samples doc-diagrams doc-links agent-api api-test agent-run agent-run-v5 agent-eval report-md run run-v5
 
 deps:
 	go mod tidy
@@ -42,6 +42,12 @@ agent-api:
 
 api-test:
 	go test ./cmd/agent-api/... ./internal/service/... -count=1
+
+rag-index-build:
+	go run ./cmd/rag-index
+
+rag-index-status:
+	go run ./cmd/rag-index -status
 
 real-run-samples:
 	$(MAKE) mysql-check

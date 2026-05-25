@@ -4,6 +4,7 @@ package main
 import (
 	"ai_slow_log/internal/config"
 	"ai_slow_log/internal/llm"
+	"ai_slow_log/internal/rag"
 	"ai_slow_log/internal/service"
 	"context"
 	"encoding/json"
@@ -44,6 +45,7 @@ func main() {
 		webhookSecret:     strings.TrimSpace(os.Getenv("SLOWLOG_WEBHOOK_SECRET")),
 		ingestMinQueryTime: ingestMinQueryTimeFromEnv(),
 		publicBase:        strings.TrimSpace(os.Getenv("SLOWLOG_API_PUBLIC_URL")),
+		ragIndexDir:       rag.IndexDirOr(""),
 	}
 
 	mux := http.NewServeMux()
@@ -53,6 +55,8 @@ func main() {
 	mux.HandleFunc("GET /v1/jobs/{id}", srv.handleGetJob)
 	mux.HandleFunc("GET /v1/reports/{id}", srv.handleGetReport)
 	mux.HandleFunc("GET /v1/reports/{id}/brief.html", srv.handleGetBriefHTML)
+	mux.HandleFunc("GET /v1/rag/status", srv.handleRAGStatus)
+	mux.HandleFunc("POST /v1/rag/rebuild", srv.handleRAGRebuild)
 
 	log.Printf("agent-api listening on %s (report_dir=%s)", addr, reportDir)
 	if err := http.ListenAndServe(addr, mux); err != nil {
@@ -68,6 +72,7 @@ type server struct {
 	webhookSecret      string
 	ingestMinQueryTime float64
 	publicBase         string
+	ragIndexDir        string
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {

@@ -9,9 +9,9 @@ import (
 
 // EmbeddingRetriever 内存向量 TopK（启动时 embed 全部 chunk，查询时再 embed query）。
 type EmbeddingRetriever struct {
-	chunks  []KnowledgeChunk
-	vectors [][]float32
-	topK    int
+	chunks   []KnowledgeChunk
+	vectors  [][]float32
+	topK     int
 	embedder Embedder
 }
 
@@ -48,6 +48,14 @@ func NewEmbeddingRetriever(opts EmbeddingOptions) (*EmbeddingRetriever, error) {
 		topK:     topK,
 		embedder: opts.Embedder,
 	}, nil
+}
+
+// Snapshot 返回索引快照（用于持久化）。
+func (r *EmbeddingRetriever) Snapshot() (chunks []KnowledgeChunk, vectors [][]float32) {
+	if r == nil {
+		return nil, nil
+	}
+	return r.chunks, r.vectors
 }
 
 // Retrieve 按余弦相似度返回 TopK。

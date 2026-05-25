@@ -19,9 +19,9 @@ func NewDefaultRetriever() (Retriever, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewEmbeddingRetriever(EmbeddingOptions{TopK: topK, Embedder: emb})
+		return newEmbeddingWithPersist(topK, emb)
 	case "tfidf", "":
-		return NewTFIDFRetriever(TFIDFOptions{TopK: topK})
+		return newTFIDFWithPersist(topK)
 	default:
 		return nil, fmt.Errorf("unknown SLOWLOG_RAG=%q (use tfidf, embedding, or mock)", mode)
 	}

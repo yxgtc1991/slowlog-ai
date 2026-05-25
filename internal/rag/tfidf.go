@@ -3,7 +3,6 @@ package rag
 import (
 	"context"
 	"fmt"
-	"math"
 	"sort"
 )
 
@@ -25,35 +24,11 @@ type TFIDFOptions struct {
 
 // NewTFIDFRetriever 从嵌入的 slowlog/docs 构建索引（按 ## 切 chunk）。
 func NewTFIDFRetriever(opts TFIDFOptions) (*TFIDFRetriever, error) {
-	topK := opts.TopK
-	if topK <= 0 {
-		topK = 3
-	}
-	raw, err := loadKnowledgeChunks()
+	idx, err := buildTFIDFIndex()
 	if err != nil {
 		return nil, err
 	}
-	df := make(map[string]int)
-	chunks := make([]scoredChunk, 0, len(raw))
-	for _, doc := range raw {
-		tokens := tokenize(doc.Title + " " + doc.Content)
-		tf := termFreq(tokens)
-		for term := range tf {
-			df[term]++
-		}
-		chunks = append(chunks, scoredChunk{
-			chunk: doc,
-			tf:    tf,
-		})
-	}
-	nDocs := float64(len(chunks))
-	for i := range chunks {
-		for term, tf := range chunks[i].tf {
-			idf := 1.0 + math.Log2((nDocs+1.0)/(float64(df[term])+1.0))
-			chunks[i].tf[term] = tf * idf
-		}
-	}
-	return &TFIDFRetriever{chunks: chunks, topK: topK}, nil
+	return idx.retriever(opts.TopK), nil
 }
 
 // Retrieve 按查询返回 TopK 知识块（按相关度排序）。

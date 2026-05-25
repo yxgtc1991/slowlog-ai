@@ -33,6 +33,10 @@ make rag-check "LIMIT ORDER BY filesort 索引"
 # 检索 golden + 单元测试（改知识库后必跑）
 make rag-test
 
+# 构建磁盘索引（G13，改知识库后）
+make rag-index-build
+make rag-index-status
+
 # 并排对比 tfidf vs embedding（强制 local 向量，无需 Key）
 make rag-check-compare
 
@@ -55,6 +59,8 @@ SLOWLOG_RAG=mock make agent-eval
 | 变量 | 默认 | 说明 |
 |------|------|------|
 | `SLOWLOG_RAG` | `tfidf` | `tfidf` \| `embedding` \| `mock` |
+| `SLOWLOG_RAG_PERSIST` | off | `1` 时优先读写磁盘索引 |
+| `SLOWLOG_RAG_INDEX_DIR` | `data/rag-index` | 索引目录（见 [RAG-INDEX](../design/RAG-INDEX.md)） |
 | `SLOWLOG_RAG_TOPK` | `3` | 返回条数上限 |
 | `SLOWLOG_EMBEDDING_PROVIDER` | `local` | 仅 `embedding` 时：`local`（哈希向量）\| `http`（调 API） |
 | `SLOWLOG_EMBEDDING_API_KEY` | — | `http` 时用；可复用 `DEEPSEEK_API_KEY` |
@@ -106,6 +112,8 @@ V6 里 LLM 每轮若选 `retrieve_rag`，会用当前 `SLOWLOG_RAG` 对应的后
 | `internal/rag/embedding.go` | 内存向量 TopK |
 | `internal/rag/embedder.go` | `local` / `http` Embedder |
 | `internal/rag/factory.go` | `NewDefaultRetriever()` |
+| `internal/rag/persist.go` | 磁盘加载/保存 |
+| `cmd/rag-index/main.go` | 离线建索引 |
 | `cmd/rag-check/main.go` | 本地试跑 CLI |
 
 扩展新知识：在 `internal/rag/slowlog/docs/` 下按目录加 `.md`（`patterns/`、`metrics/` 等），重新编译即可。
