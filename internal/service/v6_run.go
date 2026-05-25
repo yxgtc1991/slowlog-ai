@@ -14,13 +14,22 @@ import (
 	"time"
 )
 
+// RunMeta 请求元数据（G14 审计 / 多实例）。
+type RunMeta struct {
+	InstanceID string
+	RequestID  string
+	Actor      string
+	ClientIP   string
+}
+
 // RunV6Config 一次 V6 分析请求（HTTP / 内部任务共用）。
 type RunV6Config struct {
-	SlowLog         string
-	ReportDir       string
-	Guided          bool
-	HITL            bool
-	AnalyzeTimeout  time.Duration
+	SlowLog        string
+	ReportDir      string
+	Guided         bool
+	HITL           bool
+	AnalyzeTimeout time.Duration
+	Meta           RunMeta
 }
 
 // RunV6Result 分析结果与报告路径。
@@ -90,6 +99,10 @@ func RunV6(ctx context.Context, client *llm.DeepSeekClient, cfg RunV6Config) (*R
 	}
 
 	report := analyzer.BuildV6RunReport(cfg.SlowLog, result, toolNames)
+	report.InstanceID = cfg.Meta.InstanceID
+	report.RequestID = cfg.Meta.RequestID
+	report.Actor = cfg.Meta.Actor
+	report.ClientIP = cfg.Meta.ClientIP
 	paths, err := analyzer.SaveV6RunReport(dir, report)
 	if err != nil {
 		return nil, fmt.Errorf("save report: %w", err)

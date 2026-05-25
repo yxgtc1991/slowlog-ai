@@ -42,6 +42,10 @@ type V6AgentRunReport struct {
 	FinalPhase     string                 `json:"final_phase,omitempty"`
 	AgentState     *AgentState            `json:"agent_state,omitempty"`
 	Trace          *RunTrace              `json:"trace,omitempty"`
+	InstanceID     string                 `json:"instance_id,omitempty"`
+	RequestID      string                 `json:"request_id,omitempty"`
+	Actor          string                 `json:"actor,omitempty"`
+	ClientIP       string                 `json:"client_ip,omitempty"`
 }
 
 // BuildV6RunReport 从 Analyze 结果组装报告（需 Analyze 时开启 round 记录）。

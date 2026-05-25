@@ -1,0 +1,13 @@
+{
+  "instances": [
+    {
+      "id": "default",
+      "label": "本地 test 库（使用 .env MYSQL_*）"
+    },
+    {
+      "id": "readonly",
+      "label": "仅诊断、禁止建索引",
+      "allowed_tools": ["connect_mysql_instance", "explain_mysql_query", "analyze_slow_log"]
+    }
+  ]
+}

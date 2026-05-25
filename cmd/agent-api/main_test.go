@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ai_slow_log/internal/ops"
 	"ai_slow_log/internal/service"
 	"bytes"
 	"encoding/json"
@@ -11,9 +12,18 @@ import (
 	"testing"
 )
 
+func testServer(t *testing.T) *server {
+	t.Helper()
+	reg, err := ops.LoadRegistry("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &server{reportDir: t.TempDir(), instances: reg}
+}
+
 func TestHandleHealth(t *testing.T) {
 	t.Parallel()
-	s := &server{reportDir: t.TempDir()}
+	s := testServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/v1/health", nil)
 	rec := httptest.NewRecorder()
 	s.handleHealth(rec, req)
@@ -24,7 +34,8 @@ func TestHandleHealth(t *testing.T) {
 
 func TestHandleAnalyze_emptyBody(t *testing.T) {
 	t.Parallel()
-	s := &server{reportDir: t.TempDir(), timeout: 0}
+	s := testServer(t)
+	s.timeout = 0
 	req := httptest.NewRequest(http.MethodPost, "/v1/analyze", nil)
 	rec := httptest.NewRecorder()
 	s.handleAnalyze(rec, req)
@@ -36,7 +47,8 @@ func TestHandleAnalyze_emptyBody(t *testing.T) {
 func TestHandleGetReport_notFound(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	s := &server{reportDir: dir}
+	s := testServer(t)
+	s.reportDir = dir
 	req := httptest.NewRequest(http.MethodGet, "/v1/reports/agent-run-missing", nil)
 	req.SetPathValue("id", "agent-run-missing")
 	rec := httptest.NewRecorder()
@@ -53,7 +65,8 @@ func TestHandleGetReport_ok(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, id+".json"), []byte(`{"ok":true}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	s := &server{reportDir: dir}
+	s := testServer(t)
+	s.reportDir = dir
 	req := httptest.NewRequest(http.MethodGet, "/v1/reports/"+id, nil)
 	req.SetPathValue("id", id)
 	rec := httptest.NewRecorder()
@@ -75,7 +88,8 @@ func TestReadSlowLogBody_json(t *testing.T) {
 
 func TestHandleIngest_unauthorized(t *testing.T) {
 	t.Parallel()
-	s := &server{reportDir: t.TempDir(), webhookSecret: "secret"}
+	s := testServer(t)
+	s.webhookSecret = "secret"
 	body := []byte(`{"slow_log":"# Query_time: 2.0\nSELECT 1"}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/ingest", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -87,7 +101,9 @@ func TestHandleIngest_unauthorized(t *testing.T) {
 
 func TestHandleIngest_skipThreshold(t *testing.T) {
 	t.Parallel()
-	s := &server{reportDir: t.TempDir(), ingestMinQueryTime: 1.0, jobs: service.NewJobStore()}
+	s := testServer(t)
+	s.ingestMinQueryTime = 1.0
+	s.jobs = service.NewJobStore()
 	body := []byte(`{"slow_log":"# Query_time: 0.01\nSELECT 1","async":true}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/ingest", bytes.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -106,7 +122,8 @@ func TestHandleGetJob_ok(t *testing.T) {
 	t.Parallel()
 	store := service.NewJobStore()
 	store.Create("job-x", "fb")
-	s := &server{jobs: store}
+	s := testServer(t)
+	s.jobs = store
 	req := httptest.NewRequest(http.MethodGet, "/v1/jobs/job-x", nil)
 	req.SetPathValue("id", "job-x")
 	rec := httptest.NewRecorder()

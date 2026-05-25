@@ -24,6 +24,8 @@ SLOWLOG_API_ADDR=:8080 go run ./cmd/agent-api
 | `SLOWLOG_INGEST_MIN_QUERY_TIME` | `0` | 低于该 Query_time（秒）则跳过 |
 | `SLOWLOG_API_PUBLIC_URL` | （空） | 响应中 `report_url` 前缀，如 `http://host:8080` |
 
+G14 多实例与审计见 [OPS.md](OPS.md)。
+
 ---
 
 ## 接口
@@ -34,6 +36,12 @@ SLOWLOG_API_ADDR=:8080 go run ./cmd/agent-api
 {"status":"ok"}
 ```
 
+### `GET /v1/instances`
+
+```json
+{"instances":[{"id":"default","label":"..."}]}
+```
+
 ### `POST /v1/analyze`
 
 **Body**（二选一）：
@@ -42,6 +50,8 @@ SLOWLOG_API_ADDR=:8080 go run ./cmd/agent-api
 - `Content-Type: text/plain` → 慢日志原文
 
 **Query**：`?guided=false` 关闭推荐流程（缩短轮次）。
+
+**Headers**（G14，可选）：`X-Instance-ID`、`X-Actor`、`X-Request-ID`（响应会回写 request id）。
 
 **Response 200**：
 

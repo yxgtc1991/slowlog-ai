@@ -38,7 +38,14 @@ func (s *server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	inst, err := s.resolveInstance(r)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+
 	if !service.PassesIngestThreshold(req.SlowLog, s.ingestMinQueryTime) {
+		s.audit("ingest", "skipped", inst.ID, "", "below query_time threshold", r)
 		writeJSON(w, http.StatusOK, ingestResponse{
 			Status:     string(service.JobSkipped),
 			SkipReason: "query_time below SLOWLOG_INGEST_MIN_QUERY_TIME",
@@ -46,17 +53,20 @@ func (s *server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	meta := s.runMeta(r, inst.ID)
 	cfg := service.RunV6Config{
 		SlowLog:        req.SlowLog,
 		ReportDir:      s.reportDir,
 		Guided:         req.GuidedEnabled(),
 		HITL:           false,
 		AnalyzeTimeout: s.timeout,
+		Meta:           meta,
 	}
 
 	if req.IngestAsyncDefault(true) {
 		jobID := service.NewJobID()
 		s.jobs.Create(jobID, req.Source)
+		s.audit("ingest", "async_started", inst.ID, "", jobID, r)
 		service.RunIngestAsync(r.Context(), s.jobs, jobID, s.llm, cfg, strings.TrimSpace(req.CallbackURL))
 		writeJSON(w, http.StatusAccepted, ingestResponse{
 			JobID:  jobID,
@@ -69,9 +79,11 @@ func (s *server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	result, err := service.RunV6(ctx, s.llm, cfg)
 	if err != nil {
+		s.audit("ingest", "failed", inst.ID, "", err.Error(), r)
 		writeErr(w, http.StatusInternalServerError, err)
 		return
 	}
+	s.audit("ingest", "ok", inst.ID, result.ReportID, "", r)
 	writeJSON(w, http.StatusOK, ingestResponse{
 		ReportID:    result.ReportID,
 		Status:      string(service.JobCompleted),

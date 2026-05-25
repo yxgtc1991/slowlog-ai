@@ -4,6 +4,7 @@ package main
 import (
 	"ai_slow_log/internal/config"
 	"ai_slow_log/internal/llm"
+	"ai_slow_log/internal/ops"
 	"ai_slow_log/internal/rag"
 	"ai_slow_log/internal/service"
 	"context"
@@ -37,19 +38,28 @@ func main() {
 	}
 
 	timeout := analyzeTimeout()
+	instReg, err := ops.LoadRegistry(strings.TrimSpace(os.Getenv("SLOWLOG_INSTANCES_FILE")))
+	if err != nil {
+		log.Fatal(err)
+	}
 	srv := &server{
-		llm:               llmClient,
-		reportDir:         reportDir,
-		timeout:           timeout,
-		jobs:              service.NewJobStore(),
-		webhookSecret:     strings.TrimSpace(os.Getenv("SLOWLOG_WEBHOOK_SECRET")),
+		llm:                llmClient,
+		reportDir:          reportDir,
+		timeout:            timeout,
+		jobs:               service.NewJobStore(),
+		webhookSecret:      strings.TrimSpace(os.Getenv("SLOWLOG_WEBHOOK_SECRET")),
 		ingestMinQueryTime: ingestMinQueryTimeFromEnv(),
-		publicBase:        strings.TrimSpace(os.Getenv("SLOWLOG_API_PUBLIC_URL")),
-		ragIndexDir:       rag.IndexDirOr(""),
+		publicBase:         strings.TrimSpace(os.Getenv("SLOWLOG_API_PUBLIC_URL")),
+		ragIndexDir:        rag.IndexDirOr(""),
+		instances:          instReg,
+		auditor:            ops.NewAuditor(strings.TrimSpace(os.Getenv("SLOWLOG_AUDIT_PATH"))),
+		requireInstance:    strings.TrimSpace(os.Getenv("SLOWLOG_REQUIRE_INSTANCE_ID")) == "1",
+		adminToken:         strings.TrimSpace(os.Getenv("SLOWLOG_ADMIN_TOKEN")),
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/health", srv.handleHealth)
+	mux.HandleFunc("GET /v1/instances", srv.handleListInstances)
 	mux.HandleFunc("POST /v1/analyze", srv.handleAnalyze)
 	mux.HandleFunc("POST /v1/ingest", srv.handleIngest)
 	mux.HandleFunc("GET /v1/jobs/{id}", srv.handleGetJob)
@@ -59,7 +69,7 @@ func main() {
 	mux.HandleFunc("POST /v1/rag/rebuild", srv.handleRAGRebuild)
 
 	log.Printf("agent-api listening on %s (report_dir=%s)", addr, reportDir)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, srv.wrap(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -73,6 +83,10 @@ type server struct {
 	ingestMinQueryTime float64
 	publicBase         string
 	ragIndexDir        string
+	instances          *ops.Registry
+	auditor            *ops.Auditor
+	requireInstance    bool
+	adminToken         string
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -93,6 +107,12 @@ type analyzeResponse struct {
 }
 
 func (s *server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
+	inst, err := s.resolveInstance(r)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+
 	body, err := readSlowLogBody(r)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err)
@@ -112,6 +132,8 @@ func (s *server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	s.audit("analyze", "started", inst.ID, "", "", r)
+
 	ctx, cancel := context.WithTimeout(r.Context(), s.timeout)
 	defer cancel()
 
@@ -121,12 +143,15 @@ func (s *server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		Guided:         guided,
 		HITL:           false,
 		AnalyzeTimeout: s.timeout,
+		Meta:           s.runMeta(r, inst.ID),
 	})
 	if err != nil {
+		s.audit("analyze", "failed", inst.ID, "", err.Error(), r)
 		writeErr(w, http.StatusInternalServerError, err)
 		return
 	}
 
+	s.audit("analyze", "ok", inst.ID, result.ReportID, "", r)
 	writeJSON(w, http.StatusOK, analyzeResponse{
 		ReportID:    result.ReportID,
 		Iterations:  result.Iterations,
