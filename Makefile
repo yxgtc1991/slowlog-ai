@@ -3,7 +3,7 @@ GOPROXY ?= https://goproxy.cn,direct
 
 export GOPROXY
 
-.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare rag-test test check real-run-samples doc-diagrams doc-links agent-run agent-run-v5 agent-eval report-md run run-v5
+.PHONY: deps vendor build mysql-check mysql-cap-check rag-check rag-check-compare rag-test test check real-run-samples doc-diagrams doc-links agent-api api-test agent-run agent-run-v5 agent-eval report-md run run-v5
 
 deps:
 	go mod tidy
@@ -37,6 +37,12 @@ check: test agent-eval rag-test doc-links
 	@echo "check: all green"
 
 # 真实 LLM 抽检（需 DEEPSEEK_API_KEY；报告写入 reports/，不提交 Git）
+agent-api:
+	go run ./cmd/agent-api
+
+api-test:
+	go test ./cmd/agent-api/... ./internal/service/... -count=1
+
 real-run-samples:
 	$(MAKE) mysql-check
 	go run ./cmd/agent-run -guided=true -trace=false testdata/slowlog-products.txt

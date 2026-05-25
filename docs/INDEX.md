@@ -38,6 +38,7 @@ docs/
 | 生产化缺口与优化路线 | [agent/PRODUCTION-GAPS.md](agent/PRODUCTION-GAPS.md) |
 | 真实 LLM 抽检清单 | [agent/REAL-RUN-CHECKLIST.md](agent/REAL-RUN-CHECKLIST.md) |
 | 日志接入设计（P3 草案） | [design/LOG-INGESTION.md](design/LOG-INGESTION.md) |
+| HTTP API（agent-api） | [design/API.md](design/API.md) |
 | V1–V6 设计与代码示例 | [design/VERSIONS.md](design/VERSIONS.md) |
 | 接口、MCP、MySQL、扩展 | [design/ARCHITECTURE.md](design/ARCHITECTURE.md) |
 | RAG 模式与环境变量 | [guides/RAG.md](guides/RAG.md) |

@@ -33,6 +33,7 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 | `make agent-run` | V6 全流程 + 写入 `reports/`（brief.html 等） | ✓ | 推荐 |
 | `make agent-run-v5` | V5 Tool Calling + `reports/v5-run-*.json` | ✓ | 对比 |
 | `make check` | **合并前护栏**：test + agent-eval + rag-test + doc-links | — | — |
+| `make agent-api` | **HTTP**：`POST /v1/analyze` 返回 report_id（需 API Key） | ✓ | 推荐 |
 | `make agent-eval` | **Agent 回归**：5 条 golden，**不调 LLM** | — | — |
 | `make rag-check` | RAG 检索试跑（默认 **TF-IDF**，可传查询词） | — | — |
 | `make rag-check-compare` | 并排对比 **tfidf** vs **embedding**（本地向量） | — | — |

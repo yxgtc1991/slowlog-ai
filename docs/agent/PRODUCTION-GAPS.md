@@ -35,7 +35,7 @@
 | G08 | P2 | 工具列表一次性注入 | 全量 MCP Meta 进 Prompt | 按 `AgentPhase` 渐进披露 | 已完成 |
 | G09 | P2 | LLM 非确定性 | 仅脚本 eval 确定性 | 真实 run 抽检 + 报告 `-report` 基线 | 已完成 |
 | G10 | P2 | `ask_question` 不阻塞 | 只写状态 | HITL 暂停/恢复（stdin 即可） | 已完成 |
-| G11 | P3 | 无 HTTP/API 服务 | CLI only | REST/内部 RPC + 异步任务 | 待做 |
+| G11 | P3 | 无 HTTP/API 服务 | CLI only | REST/内部 RPC + 异步任务 | 已完成 |
 | G12 | P3 | 未接日志链路 | 与 Fluent Bit 叙事分离 | Bit/平台 → 对象存储 → 触发诊断 | 进行中 |
 | G13 | P3 | RAG 内存索引 | embed + 进程内 TF-IDF | 向量库版本、热更新、按租户隔离 | 待做 |
 | G14 | P3 | 无多租户与审计 | 单 `.env` 连库 | 实例注册、操作审计、RBAC | 待做 |
@@ -59,12 +59,12 @@
 2. ~~**G08**~~ `ToolsForPhase` 过滤 Prompt 内工具列表  
 3. ~~**G09**~~ 2026-05-25 四条慢日志真实跑通，见 [REAL-RUN-CHECKLIST](REAL-RUN-CHECKLIST.md)  
 4. ~~**G10**~~ `SLOWLOG_AGENT_HITL=1` 时 ask_question 读 stdin；eval `ask_question_hitl`  
-5. **G11** 最小 HTTP（**下一步**）  
+5. ~~**G11**~~ `cmd/agent-api`：`POST /v1/analyze`、GET 报告（见 [API.md](../design/API.md)）  
 
-### 阶段 C — P3 生产形态（新模块或新仓库）
+### 阶段 C — P3 生产形态（新模块或新仓库）← 当前
 
-1. **G11** 最小 HTTP：`POST /analyze` 提交慢日志文本，返回 report id  
-2. **G12** 设计草案：[LOG-INGESTION.md](../design/LOG-INGESTION.md)；实现 webhook 待做  
+1. ~~**G11**~~ 最小 HTTP 已实现；生产需鉴权、异步队列  
+2. **G12** 日志平台 webhook 对接（**下一步**）  
 3. **G13** `Retriever` 接 Milvus/pgvector + 构建任务  
 4. **G14～G16** 租户、限流、多路召回按业务需要排期  
 
@@ -79,6 +79,7 @@
 | 2026-05-21 | G12 设计草案：LOG-INGESTION.md |
 | 2026-05-25 | G09 完成：4 场景真实 LLM 抽检 + products 报告 `-report` 基线 |
 | 2026-05-25 | G10 完成：SLOWLOG_AGENT_HITL + eval `ask_question_hitl` |
+| 2026-05-25 | G11 完成：`agent-api` + [API.md](../design/API.md) + `make api-test` |
 
 ---
 
