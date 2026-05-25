@@ -32,6 +32,14 @@ func callTool(name string, args map[string]interface{}) nextActionPayload {
 	}
 }
 
+func askQuestion(question string) nextActionPayload {
+	return nextActionPayload{
+		"type":       "ask_question",
+		"reasoning":  "需要用户补充信息",
+		"question":   question,
+	}
+}
+
 func analyze(text string) nextActionPayload {
 	return nextActionPayload{
 		"type":      "analyze",

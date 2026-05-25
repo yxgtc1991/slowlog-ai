@@ -10,7 +10,7 @@
 |------|------|
 | `ScriptLLM` | 按脚本顺序返回「假 LLM」JSON，**不消耗 API** |
 | `StubExecutor` | 工具返回固定 JSON，**不连 MySQL** |
-| `internal/eval/cases.go` | 5 条内置 golden（见下表） |
+| `internal/eval/cases.go` | 6 条内置 golden（见下表） |
 | `AssertReportFile` | 对 `reports/*.json` 做结构/结论断言（真实跑完后的存档） |
 
 ## 为什么做
@@ -58,6 +58,7 @@ go run ./cmd/agent-eval -report=reports/agent-run-YYYYMMDD-HHMMSS.json
 | `rag_then_finish` | 仅 RAG + finish，结论含左前缀 / price |
 | `tool_error_then_finish` | `connect_mysql` 失败仍有 `action_error` 且能 finish |
 | `analyze_then_finish` | 无 MCP 工具，analyze → finish 仍可输出索引建议 |
+| `ask_question_hitl` | ask_question + Stub 用户回答 → finish（HITL 路径） |
 
 完整三层说明见 [TESTING.md](TESTING.md)。
 

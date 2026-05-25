@@ -122,6 +122,10 @@ func runV6Agent(ctx context.Context, llmClient *llm.DeepSeekClient, server *mcp.
 	if guided {
 		opts = append(opts, analyzer.WithAgentGuide(prompt.GuidedSlowLogPreamble))
 	}
+	if analyzer.HITLEnabledFromEnv() {
+		opts = append(opts, analyzer.WithAgentHITL(true))
+		fmt.Fprintln(os.Stderr, "ℹ️  HITL 已开启：ask_question 时将等待 stdin 输入（SLOWLOG_AGENT_HITL）")
+	}
 	v6 := analyzer.NewV6AgentAnalyzer(
 		llmClient,
 		analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever()),

@@ -175,6 +175,30 @@ func AllCases() []Case {
 				FinalPhase:     "finished",
 			},
 		},
+		{
+			Name:        "ask_question_hitl",
+			SlowLogPath: defaultSlowLogPath,
+			Guide:       false,
+			HITLReplies: []string{"库 test，表 products，与慢日志一致"},
+			Executor:    NewStubExecutor(),
+			Script: []string{
+				decisionJSON("需确认库表", askQuestion("请确认慢 SQL 的数据库名和表名")),
+				decisionJSON("用户已确认", finish(
+					"证据：用户确认 test.products；慢日志 Rows_examined 高。建议检查 price 索引与左前缀。",
+				)),
+			},
+			Expect: Expect{
+				Trajectory: []TrajectoryStep{
+					{Type: string(promptv6.ActionAskQuestion)},
+					{Type: string(promptv6.ActionFinish)},
+				},
+				FinalContains:  []string{"products", "证据"},
+				MinIterations:  2,
+				MaxIterations:  2,
+				NoActionErrors: true,
+				FinalPhase:     "finished",
+			},
+		},
 	}
 }
 

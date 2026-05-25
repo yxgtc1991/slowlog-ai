@@ -32,6 +32,21 @@ func WithAgentGuide(guide string) V6AgentOption {
 	}
 }
 
+// WithAgentHITL 开启 ask_question 时等待用户输入（需配合 UserInputReader 或默认 stdin）。
+func WithAgentHITL(enabled bool) V6AgentOption {
+	return func(a *V6AgentAnalyzer) {
+		a.hitlEnabled = enabled
+	}
+}
+
+// WithAgentUserInput 指定用户输入来源（单测 / eval 用 StubUserInput）。
+func WithAgentUserInput(r UserInputReader) V6AgentOption {
+	return func(a *V6AgentAnalyzer) {
+		a.userInput = r
+		a.hitlEnabled = true
+	}
+}
+
 func (a *V6AgentAnalyzer) tracef(format string, args ...interface{}) {
 	if !a.verbose {
 		return

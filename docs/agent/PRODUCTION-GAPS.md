@@ -34,7 +34,7 @@
 | G07 | P2 | 结论缺少强制证据字段 | finish 自由文本 | Prompt 要求 result 含「证据：」行 | 已完成 |
 | G08 | P2 | 工具列表一次性注入 | 全量 MCP Meta 进 Prompt | 按 `AgentPhase` 渐进披露 | 已完成 |
 | G09 | P2 | LLM 非确定性 | 仅脚本 eval 确定性 | 真实 run 抽检 + 报告 `-report` 基线 | 已完成 |
-| G10 | P2 | `ask_question` 不阻塞 | 只写状态 | HITL 暂停/恢复（stdin 即可） | 待做 |
+| G10 | P2 | `ask_question` 不阻塞 | 只写状态 | HITL 暂停/恢复（stdin 即可） | 已完成 |
 | G11 | P3 | 无 HTTP/API 服务 | CLI only | REST/内部 RPC + 异步任务 | 待做 |
 | G12 | P3 | 未接日志链路 | 与 Fluent Bit 叙事分离 | Bit/平台 → 对象存储 → 触发诊断 | 进行中 |
 | G13 | P3 | RAG 内存索引 | embed + 进程内 TF-IDF | 向量库版本、热更新、按租户隔离 | 待做 |
@@ -58,7 +58,8 @@
 1. ~~**G07**~~ Prompt 已要求 finish 含「证据：」  
 2. ~~**G08**~~ `ToolsForPhase` 过滤 Prompt 内工具列表  
 3. ~~**G09**~~ 2026-05-25 四条慢日志真实跑通，见 [REAL-RUN-CHECKLIST](REAL-RUN-CHECKLIST.md)  
-4. **G10** `ask_question` 读 stdin（**下一步**）  
+4. ~~**G10**~~ `SLOWLOG_AGENT_HITL=1` 时 ask_question 读 stdin；eval `ask_question_hitl`  
+5. **G11** 最小 HTTP（**下一步**）  
 
 ### 阶段 C — P3 生产形态（新模块或新仓库）
 
@@ -77,6 +78,7 @@
 | 2026-05-21 | 阶段 A 完成：+3 慢日志、+5 知识库、+5 golden；G07 Prompt 证据行 |
 | 2026-05-21 | G12 设计草案：LOG-INGESTION.md |
 | 2026-05-25 | G09 完成：4 场景真实 LLM 抽检 + products 报告 `-report` 基线 |
+| 2026-05-25 | G10 完成：SLOWLOG_AGENT_HITL + eval `ask_question_hitl` |
 
 ---
 

@@ -41,6 +41,7 @@ make agent-run
 |------|------|
 | `SLOWLOG_AGENT_MODE` | `v5` / `v6`（见 [MODE.md](MODE.md)） |
 | `SLOWLOG_AGENT_TRACE=1` | stderr 打印每轮 NextAction |
+| `SLOWLOG_AGENT_HITL=1` | `ask_question` 时暂停，等待终端输入 |
 | `SLOWLOG_RAG` | `tfidf` / `embedding` / `mock` |
 | `SLOWLOG_RAG_TOPK` | 检索条数（默认 3） |
 

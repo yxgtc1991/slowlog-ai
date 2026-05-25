@@ -34,6 +34,7 @@ type Case struct {
 	Script      []string
 	Executor    *StubExecutor
 	Expect      Expect
+	HITLReplies []string // 非空时启用 HITL，按序应答 ask_question
 }
 
 // Result 单条 case 运行结果。

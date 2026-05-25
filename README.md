@@ -13,7 +13,7 @@ MySQL 慢日志 **V6 Agent** 分析（Go + DeepSeek + RAG + MCP）。**V1–V6 �
 | V6 Agent（NextAction + AgentState + guided） | ✅ |
 | MCP 连库 / EXPLAIN / 索引 dry_run | ✅ |
 | RAG（21 篇知识 · chunk · TF-IDF · 检索 golden） | ✅ |
-| Agent Eval（5 条 golden）+ 包级单测 + `make check` + CI | ✅ |
+| Agent Eval（6 条 golden）+ HITL + 包级单测 + `make check` + CI | ✅ |
 | V5 Tool Calling 对比（`SLOWLOG_AGENT_MODE`） | ✅ |
 | 报告 JSON / MD / HTML / brief | ✅ |
 | 结构化 Trace + 工具错误码 | ✅ |

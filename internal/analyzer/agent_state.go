@@ -64,8 +64,9 @@ type AgentState struct {
 	Phase    AgentPhase                `json:"phase"`
 	RAG      []RAGStateEntry           `json:"rag,omitempty"`
 	Tools    map[string]ToolStateEntry `json:"tools,omitempty"`
-	Analysis string                    `json:"analysis,omitempty"`
-	Question string                    `json:"question,omitempty"`
+	Analysis  string `json:"analysis,omitempty"`
+	Question  string `json:"question,omitempty"`
+	UserReply string `json:"user_reply,omitempty"`
 }
 
 func NewAgentState() *AgentState {
@@ -151,6 +152,10 @@ func (s *AgentState) RecordQuestion(q string) {
 	s.Question = truncateText(q, 400)
 }
 
+func (s *AgentState) RecordUserReply(answer string) {
+	s.UserReply = truncateText(answer, 400)
+}
+
 func (s *AgentState) MarkFinished() {
 	s.Phase = PhaseFinished
 }
@@ -209,6 +214,11 @@ func (s *AgentState) PromptSummary(maxField int) string {
 	if s.Question != "" {
 		b.WriteString("- 待澄清: ")
 		b.WriteString(truncateText(s.Question, maxField))
+		b.WriteByte('\n')
+	}
+	if s.UserReply != "" {
+		b.WriteString("- 用户已答: ")
+		b.WriteString(truncateText(s.UserReply, maxField))
 		b.WriteByte('\n')
 	}
 	return strings.TrimSpace(b.String())

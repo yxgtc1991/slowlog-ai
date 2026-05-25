@@ -87,6 +87,10 @@ func runV6(ctx context.Context, llmClient *llm.DeepSeekClient, server *mcp.Serve
 	if agentTrace {
 		v6Opts = append(v6Opts, analyzer.WithAgentVerbose(true))
 	}
+	if analyzer.HITLEnabledFromEnv() {
+		v6Opts = append(v6Opts, analyzer.WithAgentHITL(true))
+		fmt.Fprintln(os.Stderr, "ℹ️  HITL 已开启：ask_question 时将等待 stdin 输入")
+	}
 	v6Analyzer := analyzer.NewV6AgentAnalyzer(
 		llmClient,
 		analyzer.NewRAGRetrieverAdapter(rag.MustDefaultRetriever()),

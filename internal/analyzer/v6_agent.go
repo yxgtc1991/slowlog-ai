@@ -18,6 +18,8 @@ type V6AgentAnalyzer struct {
 	verbose             bool
 	recordRounds        bool
 	extraGuide          string
+	hitlEnabled         bool
+	userInput           UserInputReader
 	maxIterations       int
 	currentIteration    int
 	conversationHistory []string
@@ -192,9 +194,30 @@ func (a *V6AgentAnalyzer) Analyze(ctx context.Context, slowLog string) (*V6Agent
 				fmt.Sprintf("分析: %s", decision.NextAction.Analysis))
 
 		case promptv6.ActionAskQuestion:
-			a.state.RecordQuestion(decision.NextAction.Question)
+			q := decision.NextAction.Question
+			a.state.RecordQuestion(q)
 			a.conversationHistory = append(a.conversationHistory,
-				fmt.Sprintf("问题: %s", decision.NextAction.Question))
+				fmt.Sprintf("问题: %s", q))
+			if a.hitlEnabled {
+				reader := a.userInput
+				if reader == nil {
+					reader = DefaultStdinReader()
+				}
+				prompt := fmt.Sprintf("\n🙋 Agent 提问: %s\n> ", q)
+				if a.verbose {
+					a.tracef("%s", prompt)
+				}
+				answer, err := reader.ReadLine(prompt)
+				if err != nil {
+					actionErr = err
+					roundRec.ActionError = err.Error()
+				} else if answer != "" {
+					a.state.RecordUserReply(answer)
+					roundRec.ActionOutcome = map[string]interface{}{"user_reply": answer}
+					a.conversationHistory = append(a.conversationHistory,
+						fmt.Sprintf("用户回答: %s", answer))
+				}
+			}
 
 		case promptv6.ActionFinish:
 			finalResult = decision.NextAction.Result.String()

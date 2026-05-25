@@ -34,6 +34,9 @@ func RunCase(ctx context.Context, c Case) Result {
 	if c.Guide {
 		opts = append(opts, analyzer.WithAgentGuide(promptv6.GuidedSlowLogPreamble))
 	}
+	if len(c.HITLReplies) > 0 {
+		opts = append(opts, analyzer.WithAgentUserInput(analyzer.NewStubUserInput(c.HITLReplies...)))
+	}
 
 	v6 := analyzer.NewV6AgentAnalyzer(
 		llm,

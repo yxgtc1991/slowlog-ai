@@ -12,7 +12,7 @@
 |------|------|------|:--------:|--------|
 | 包级单测 | `make test` | ~2s | 否 | 解析、报告、分词、配置、toolerr 等 |
 | RAG 回归 | `make rag-test` | ~1s | 否 | TF-IDF / 分块 / **15 条**检索 golden |
-| Agent 回归 | `make agent-eval` | ~1s | 否 | **5 条** V6 轨迹 golden（ScriptLLM） |
+| Agent 回归 | `make agent-eval` | ~1s | 否 | **6 条** V6 轨迹 golden（ScriptLLM） |
 
 **合并前推荐**（与 CI 一致）：
 
