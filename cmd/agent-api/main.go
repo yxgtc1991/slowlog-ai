@@ -35,15 +35,22 @@ func main() {
 		log.Fatal(err)
 	}
 
+	timeout := analyzeTimeout()
 	srv := &server{
-		llm:       llmClient,
-		reportDir: reportDir,
-		timeout:   analyzeTimeout(),
+		llm:               llmClient,
+		reportDir:         reportDir,
+		timeout:           timeout,
+		jobs:              service.NewJobStore(),
+		webhookSecret:     strings.TrimSpace(os.Getenv("SLOWLOG_WEBHOOK_SECRET")),
+		ingestMinQueryTime: ingestMinQueryTimeFromEnv(),
+		publicBase:        strings.TrimSpace(os.Getenv("SLOWLOG_API_PUBLIC_URL")),
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/health", srv.handleHealth)
 	mux.HandleFunc("POST /v1/analyze", srv.handleAnalyze)
+	mux.HandleFunc("POST /v1/ingest", srv.handleIngest)
+	mux.HandleFunc("GET /v1/jobs/{id}", srv.handleGetJob)
 	mux.HandleFunc("GET /v1/reports/{id}", srv.handleGetReport)
 	mux.HandleFunc("GET /v1/reports/{id}/brief.html", srv.handleGetBriefHTML)
 
@@ -54,9 +61,13 @@ func main() {
 }
 
 type server struct {
-	llm       *llm.DeepSeekClient
-	reportDir string
-	timeout   time.Duration
+	llm                *llm.DeepSeekClient
+	reportDir          string
+	timeout            time.Duration
+	jobs               *service.JobStore
+	webhookSecret      string
+	ingestMinQueryTime float64
+	publicBase         string
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -100,10 +111,11 @@ func (s *server) handleAnalyze(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	result, err := service.RunV6(ctx, s.llm, service.RunV6Config{
-		SlowLog:   string(body),
-		ReportDir: s.reportDir,
-		Guided:    guided,
-		HITL:      false,
+		SlowLog:        string(body),
+		ReportDir:      s.reportDir,
+		Guided:         guided,
+		HITL:           false,
+		AnalyzeTimeout: s.timeout,
 	})
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err)

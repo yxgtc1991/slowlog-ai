@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ai_slow_log/internal/service"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -69,6 +70,49 @@ func TestReadSlowLogBody_json(t *testing.T) {
 	b, err := readSlowLogBody(req)
 	if err != nil || !bytes.Contains(b, []byte("SELECT 1")) {
 		t.Fatalf("b=%s err=%v", b, err)
+	}
+}
+
+func TestHandleIngest_unauthorized(t *testing.T) {
+	t.Parallel()
+	s := &server{reportDir: t.TempDir(), webhookSecret: "secret"}
+	body := []byte(`{"slow_log":"# Query_time: 2.0\nSELECT 1"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/ingest", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	s.handleIngest(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status=%d", rec.Code)
+	}
+}
+
+func TestHandleIngest_skipThreshold(t *testing.T) {
+	t.Parallel()
+	s := &server{reportDir: t.TempDir(), ingestMinQueryTime: 1.0, jobs: service.NewJobStore()}
+	body := []byte(`{"slow_log":"# Query_time: 0.01\nSELECT 1","async":true}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/ingest", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	s.handleIngest(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d %s", rec.Code, rec.Body.String())
+	}
+	var resp ingestResponse
+	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+	if resp.Status != "skipped" {
+		t.Fatalf("%+v", resp)
+	}
+}
+
+func TestHandleGetJob_ok(t *testing.T) {
+	t.Parallel()
+	store := service.NewJobStore()
+	store.Create("job-x", "fb")
+	s := &server{jobs: store}
+	req := httptest.NewRequest(http.MethodGet, "/v1/jobs/job-x", nil)
+	req.SetPathValue("id", "job-x")
+	rec := httptest.NewRecorder()
+	s.handleGetJob(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d", rec.Code)
 	}
 }
 

@@ -11,14 +11,16 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // RunV6Config 一次 V6 分析请求（HTTP / 内部任务共用）。
 type RunV6Config struct {
-	SlowLog   string
-	ReportDir string
-	Guided    bool
-	HITL      bool
+	SlowLog         string
+	ReportDir       string
+	Guided          bool
+	HITL            bool
+	AnalyzeTimeout  time.Duration
 }
 
 // RunV6Result 分析结果与报告路径。
@@ -33,6 +35,13 @@ type RunV6Result struct {
 func ReportIDFromJSONPath(jsonPath string) string {
 	base := filepath.Base(jsonPath)
 	return strings.TrimSuffix(base, filepath.Ext(base))
+}
+
+func (c RunV6Config) timeoutDuration() time.Duration {
+	if c.AnalyzeTimeout > 0 {
+		return c.AnalyzeTimeout
+	}
+	return 15 * time.Minute
 }
 
 // RunV6 执行 V6 Agent 并写入 reports/。

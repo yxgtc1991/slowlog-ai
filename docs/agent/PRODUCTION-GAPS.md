@@ -36,7 +36,7 @@
 | G09 | P2 | LLM 非确定性 | 仅脚本 eval 确定性 | 真实 run 抽检 + 报告 `-report` 基线 | 已完成 |
 | G10 | P2 | `ask_question` 不阻塞 | 只写状态 | HITL 暂停/恢复（stdin 即可） | 已完成 |
 | G11 | P3 | 无 HTTP/API 服务 | CLI only | REST/内部 RPC + 异步任务 | 已完成 |
-| G12 | P3 | 未接日志链路 | 与 Fluent Bit 叙事分离 | Bit/平台 → 对象存储 → 触发诊断 | 进行中 |
+| G12 | P3 | 未接日志链路 | 与 Fluent Bit 叙事分离 | Bit/平台 → 对象存储 → 触发诊断 | 已完成 |
 | G13 | P3 | RAG 内存索引 | embed + 进程内 TF-IDF | 向量库版本、热更新、按租户隔离 | 待做 |
 | G14 | P3 | 无多租户与审计 | 单 `.env` 连库 | 实例注册、操作审计、RBAC | 待做 |
 | G15 | P3 | 无成本与限流 | 每 run 直调 LLM | 配额、并发、超时、熔断 | 待做 |
@@ -64,8 +64,8 @@
 ### 阶段 C — P3 生产形态（新模块或新仓库）← 当前
 
 1. ~~**G11**~~ 最小 HTTP 已实现；生产需鉴权、异步队列  
-2. **G12** 日志平台 webhook 对接（**下一步**）  
-3. **G13** `Retriever` 接 Milvus/pgvector + 构建任务  
+2. ~~**G12**~~ `POST /v1/ingest` + Job 轮询 + [LOG-INGESTION](../design/LOG-INGESTION.md)  
+3. **G13** `Retriever` 接 Milvus/pgvector（**下一步**）  
 4. **G14～G16** 租户、限流、多路召回按业务需要排期  
 
 ---
@@ -80,6 +80,7 @@
 | 2026-05-25 | G09 完成：4 场景真实 LLM 抽检 + products 报告 `-report` 基线 |
 | 2026-05-25 | G10 完成：SLOWLOG_AGENT_HITL + eval `ask_question_hitl` |
 | 2026-05-25 | G11 完成：`agent-api` + [API.md](../design/API.md) + `make api-test` |
+| 2026-05-25 | G12 完成：`/v1/ingest` 异步任务 + Fluent Bit 示例配置 |
 
 ---
 

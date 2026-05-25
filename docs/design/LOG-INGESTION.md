@@ -1,55 +1,74 @@
-# 日志接入设计（P3 路线图）
+# 日志接入设计（Fluent Bit → agent-api）
 
-[生产化缺口](../agent/PRODUCTION-GAPS.md) · [架构](ARCHITECTURE.md)
+[生产化缺口](../agent/PRODUCTION-GAPS.md) · [HTTP API](API.md) · [架构](ARCHITECTURE.md)
 
-> **状态**：设计草案，**未实现**。用于说明 slowlog-ai 与现有日志采集（如 Fluent Bit on K8s）如何衔接，不表示已上线。
+> **状态**：**Webhook 已实现**（`POST /v1/ingest`）；对象存储事件、多租户仍为 P3 后续项。
 
 ---
 
 ## 目标
 
-将 **已落盘的慢日志** 自动或半自动送入 Agent 诊断，输出结构化报告供 DBA/研发复核。
+将 **已采集的慢日志** 自动送入 Agent 诊断，输出 `report_id` 供平台轮询或回调。
 
 ---
 
-## 推荐链路（与 Fluent Bit 叙事对齐）
+## 推荐链路
 
 ```text
 MySQL slow log
-    → Fluent Bit（DaemonSet / Sidecar）采集
-    → 对象存储或日志平台（S3 / ES / Loki / 自建）
-    → 规则/阈值触发（Query_time、Rows_examined）
-    → 调用诊断服务（未来：POST /analyze）
-    → slowlog-ai Agent（RAG + MCP + 报告 JSON/HTML）
-    → 工单 / IM / 邮件（人工审批 DDL）
+    → Fluent Bit（K8s DaemonSet / Sidecar）
+    → 过滤（Query_time 阈值，可选）
+    → POST /v1/ingest（async 默认 true）
+    → agent-api 后台 RunV6
+    → reports/agent-run-*.json + brief.html
+    → GET /v1/jobs/{id} 或 callback_url
 ```
+
+---
+
+## Webhook 接口
+
+见 [API.md · POST /v1/ingest](API.md)。
+
+| 能力 | 说明 |
+|------|------|
+| 异步 | 默认 `async: true`，立即 `202` + `job_id` |
+| 同步 | `"async": false` 等同 `/v1/analyze` |
+| 鉴权 | 可选 `SLOWLOG_WEBHOOK_SECRET` + 请求头 `X-Webhook-Secret` |
+| 阈值 | `SLOWLOG_INGEST_MIN_QUERY_TIME`（秒），低于则 `skipped` |
+| 回调 | `callback_url` 完成后 POST 任务 JSON |
+
+---
+
+## Fluent Bit 示例
+
+仓库内示例配置：[examples/fluent-bit-ingest.conf](../../examples/fluent-bit-ingest.conf)。
+
+要点：
+
+1. `tail` 或多行 parser 读慢日志文件  
+2. `grep` 过滤 Query_time（或在服务端用环境变量阈值）  
+3. `http` output 指向 `http://<agent-api>:8080/v1/ingest`  
+4. Body 为 JSON：`{"slow_log":"<整段慢日志>","source":"fluent-bit","async":true}`  
 
 ---
 
 ## 触发策略
 
-| 策略 | 说明 |
+| 策略 | 实现 |
 |------|------|
-| 阈值 | 单条 Query_time > N 秒或 Rows_examined > M |
-| 聚合 | 同一 digest 5 分钟内出现 K 次 |
-| 手动 | 平台粘贴慢日志，等同当前 `make agent-run` |
+| 阈值 | Fluent Bit `grep` 或 `SLOWLOG_INGEST_MIN_QUERY_TIME` |
+| 手动 | `POST /v1/analyze` / `make agent-run` |
+| 聚合 | 未实现（需日志平台侧 digest 聚合） |
 
 ---
 
-## 与当前仓库边界
+## 与仓库边界
 
-| 已有 | 待建（G11/G12） |
-|------|-----------------|
-| CLI `agent-run`、报告 `reports/` | HTTP 服务、任务队列 |
-| MCP dry_run | 变更审批流、审计库 |
-| `make check` 回归 | 接入层监控与 SLA |
+| 已有 | 后续 |
+|------|------|
+| `POST /v1/ingest`、内存 JobStore | Redis/DB 持久化任务 |
+| callback HTTP POST | 签名、重试、死信 |
+| 示例 Fluent Bit 片段 | 各云厂商完整 Helm |
 
----
-
-## 最小可行接入（建议实施顺序）
-
-1. **Webhook**：日志平台 POST 慢日志正文 → 异步跑 Agent → 回调报告 URL  
-2. **对象存储**：新文件事件 → Lambda/Job 拉取 → 同上游  
-3. **多租户**：`instance_id` 映射不同 `MYSQL_*` 凭证（密钥托管，不进 Git）  
-
-实现跟踪见 [PRODUCTION-GAPS · G11/G12](../agent/PRODUCTION-GAPS.md)。
+实现跟踪：[PRODUCTION-GAPS · G12](../agent/PRODUCTION-GAPS.md)。

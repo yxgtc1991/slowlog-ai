@@ -20,6 +20,9 @@ SLOWLOG_API_ADDR=:8080 go run ./cmd/agent-api
 | `SLOWLOG_API_ADDR` | `:8080` | 监听地址 |
 | `SLOWLOG_REPORT_DIR` | `reports` | 报告目录 |
 | `SLOWLOG_ANALYZE_TIMEOUT` | `15m` | 单次分析超时 |
+| `SLOWLOG_WEBHOOK_SECRET` | （空） | 非空时 ingest 需头 `X-Webhook-Secret` |
+| `SLOWLOG_INGEST_MIN_QUERY_TIME` | `0` | 低于该 Query_time（秒）则跳过 |
+| `SLOWLOG_API_PUBLIC_URL` | （空） | 响应中 `report_url` 前缀，如 `http://host:8080` |
 
 ---
 
@@ -62,6 +65,40 @@ SLOWLOG_API_ADDR=:8080 go run ./cmd/agent-api
 
 返回精简 HTML 报告。
 
+### `POST /v1/ingest`（G12 日志接入）
+
+供 Fluent Bit / 日志平台 webhook 调用。默认 **异步**。
+
+**Headers**（可选）：`X-Webhook-Secret: <SLOWLOG_WEBHOOK_SECRET>`
+
+**Body**（JSON）：
+
+```json
+{
+  "slow_log": "# Time: ...\nSELECT ...",
+  "source": "fluent-bit",
+  "async": true,
+  "guided": false,
+  "callback_url": "https://your-platform/hooks/slowlog-done"
+}
+```
+
+**Response 202**（async）：
+
+```json
+{"job_id":"job-20260525-120000.123","status":"pending"}
+```
+
+**Response 200**（sync 或 `skipped`）：
+
+```json
+{"report_id":"agent-run-...","status":"completed","final_result":"..."}
+```
+
+### `GET /v1/jobs/{job_id}`
+
+查询异步任务；完成后含 `report_id`、`report_url`（若配置了 public URL）。
+
 ---
 
 ## 示例
@@ -74,6 +111,12 @@ curl -s -X POST http://127.0.0.1:8080/v1/analyze?guided=false \
   --data-binary @testdata/slowlog-index-hit.txt
 
 curl -s http://127.0.0.1:8080/v1/reports/agent-run-20260525-120000 | head
+
+# 异步 ingest（Fluent Bit 同类）
+curl -s -X POST http://127.0.0.1:8080/v1/ingest \
+  -H 'Content-Type: application/json' \
+  -d '{"slow_log":"# Query_time: 2.0\nSELECT 1","async":true,"guided":false}'
+# → job_id，再 GET /v1/jobs/{job_id}
 ```
 
 ---
